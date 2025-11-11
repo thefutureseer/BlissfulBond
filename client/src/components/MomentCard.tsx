@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Heart } from "lucide-react";
-import type { Moment } from "@/lib/localStorage";
+import type { Moment } from "@/lib/api";
 
 interface MomentCardProps {
   moment: Moment;
@@ -33,10 +34,25 @@ export default function MomentCard({ moment }: MomentCardProps) {
           </div>
           <div className="flex-1 space-y-2">
             <p className="text-sm leading-relaxed">{moment.content}</p>
+            {moment.sentiment && (
+              <div className="flex flex-wrap gap-1">
+                {moment.sentiment.emotions.slice(0, 3).map((emotion) => (
+                  <Badge key={emotion} variant="secondary" className="text-xs">
+                    {emotion}
+                  </Badge>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{formattedDate}</span>
               <span>•</span>
               <span>{formattedTime}</span>
+              {moment.sentiment && (
+                <>
+                  <span>•</span>
+                  <span className="capitalize">{moment.sentiment.label}</span>
+                </>
+              )}
             </div>
           </div>
         </div>

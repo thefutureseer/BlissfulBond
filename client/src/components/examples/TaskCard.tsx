@@ -5,17 +5,19 @@ export default function TaskCardExample() {
   const [tasks, setTasks] = useState([
     {
       id: "1",
-      user: "daniel" as const,
+      userId: "user1",
       text: "Plan a romantic dinner together",
       category: "Romance",
       completed: false,
+      createdAt: new Date().toISOString(),
     },
     {
       id: "2",
-      user: "pacharee" as const,
+      userId: "user2",
       text: "Morning meditation session",
       category: "Wellness",
       completed: true,
+      createdAt: new Date().toISOString(),
     },
   ]);
 

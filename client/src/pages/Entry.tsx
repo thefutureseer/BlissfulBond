@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
-import { Heart, ArrowLeft } from "lucide-react";
-import { addMoment, loadData } from "@/lib/localStorage";
+import { Heart, ArrowLeft, Loader2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getOrCreateUser, createMoment, getCurrentUser } from "@/lib/api";
 import Confetti from "@/components/Confetti";
 
 export default function Entry() {
@@ -12,22 +13,33 @@ export default function Entry() {
   const [content, setContent] = useState("");
   const [showConfetti, setShowConfetti] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const currentUser = loadData().currentUser;
+  const queryClient = useQueryClient();
+  
+  const currentUser = getCurrentUser();
+
+  const { data: userData } = useQuery({
+    queryKey: ["/api/users", currentUser],
+    queryFn: () => getOrCreateUser(currentUser),
+  });
+
+  const createMomentMutation = useMutation({
+    mutationFn: async (momentContent: string) => {
+      if (!userData) throw new Error("User not loaded");
+      return createMoment(userData.id, momentContent);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/moments", userData?.id] });
+      setShowSuccess(true);
+      setShowConfetti(true);
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 1500);
+    },
+  });
 
   const handleSave = () => {
     if (!content.trim()) return;
-
-    addMoment({
-      user: currentUser,
-      content: content.trim(),
-    });
-
-    setShowSuccess(true);
-    setShowConfetti(true);
-
-    setTimeout(() => {
-      setLocation("/dashboard");
-    }, 1500);
+    createMomentMutation.mutate(content.trim());
   };
 
   return (
@@ -72,6 +84,7 @@ export default function Entry() {
               className="min-h-[200px] resize-none text-base"
               data-testid="input-moment-content"
               autoFocus
+              disabled={createMomentMutation.isPending}
             />
           </div>
 
@@ -89,12 +102,21 @@ export default function Entry() {
 
           <Button
             onClick={handleSave}
-            disabled={!content.trim()}
+            disabled={!content.trim() || createMomentMutation.isPending}
             className="w-full"
             data-testid="button-save-moment"
           >
-            <Heart className="w-4 h-4 mr-2" />
-            Save with Love
+            {createMomentMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Analyzing sentiment...
+              </>
+            ) : (
+              <>
+                <Heart className="w-4 h-4 mr-2" />
+                Save with Love
+              </>
+            )}
           </Button>
 
           {showSuccess && (

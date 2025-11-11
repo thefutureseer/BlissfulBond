@@ -1,29 +1,40 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye } from "lucide-react";
+import { Plus, Eye, BarChart3 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import MomentCard from "@/components/MomentCard";
 import HeartProgress from "@/components/HeartProgress";
-import { loadData, setCurrentUser } from "@/lib/localStorage";
-import type { User } from "@/lib/localStorage";
+import { getOrCreateUser, getUserMoments, setCurrentUser, getCurrentUser, type User } from "@/lib/api";
 
 type ViewMode = "both" | "daniel" | "pacharee";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>("both");
-  const [data, setData] = useState(loadData());
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setData(loadData());
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
+  const { data: danielUser } = useQuery({
+    queryKey: ["/api/users", "daniel"],
+    queryFn: () => getOrCreateUser("daniel"),
+  });
 
-  const danielMoments = data.moments.filter((m) => m.user === "daniel");
-  const pachareeMoments = data.moments.filter((m) => m.user === "pacharee");
+  const { data: pachareeUser } = useQuery({
+    queryKey: ["/api/users", "pacharee"],
+    queryFn: () => getOrCreateUser("pacharee"),
+  });
+
+  const { data: danielMoments = [] } = useQuery({
+    queryKey: ["/api/moments", danielUser?.id],
+    queryFn: () => danielUser ? getUserMoments(danielUser.id) : [],
+    enabled: !!danielUser,
+  });
+
+  const { data: pachareeMoments = [] } = useQuery({
+    queryKey: ["/api/moments", pachareeUser?.id],
+    queryFn: () => pachareeUser ? getUserMoments(pachareeUser.id) : [],
+    enabled: !!pachareeUser,
+  });
 
   const handleAddMoment = (user: User) => {
     setCurrentUser(user);
@@ -45,15 +56,26 @@ export default function Dashboard() {
           <h1 className="text-2xl font-script font-bold text-primary">
             Spirit Love Play
           </h1>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={cycleView}
-            data-testid="button-toggle-view"
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            {viewMode === "both" ? "Both" : viewMode === "daniel" ? "Daniel" : "Pacharee"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/analytics")}
+              data-testid="button-go-to-analytics"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={cycleView}
+              data-testid="button-toggle-view"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              {viewMode === "both" ? "Both" : viewMode === "daniel" ? "Daniel" : "Pacharee"}
+            </Button>
+          </div>
         </div>
       </header>
 

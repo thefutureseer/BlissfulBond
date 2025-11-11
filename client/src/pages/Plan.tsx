@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Plus } from "lucide-react";
 import { useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import TaskCard from "@/components/TaskCard";
-import { loadData, addTask, updateTask, deleteTask } from "@/lib/localStorage";
+import { getOrCreateUser, getUserTasks, createTask, updateTask, deleteTask as apiDeleteTask, getCurrentUser } from "@/lib/api";
 import Confetti from "@/components/Confetti";
 
 const CATEGORIES = [
@@ -17,43 +18,69 @@ const CATEGORIES = [
 
 export default function Plan() {
   const [, setLocation] = useLocation();
-  const [data, setData] = useState(loadData());
   const [newTaskText, setNewTaskText] = useState<Record<string, string>>({});
   const [showConfetti, setShowConfetti] = useState(false);
+  const queryClient = useQueryClient();
+  
+  const currentUser = getCurrentUser();
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setData(loadData());
-    }, 500);
-    return () => clearInterval(interval);
-  }, []);
+  const { data: userData } = useQuery({
+    queryKey: ["/api/users", currentUser],
+    queryFn: () => getOrCreateUser(currentUser),
+  });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["/api/tasks", userData?.id],
+    queryFn: () => userData ? getUserTasks(userData.id) : [],
+    enabled: !!userData,
+  });
+
+  const createTaskMutation = useMutation({
+    mutationFn: async ({ text, category }: { text: string; category: string }) => {
+      if (!userData) throw new Error("User not loaded");
+      return createTask(userData.id, text, category);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", userData?.id] });
+      setShowConfetti(true);
+    },
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
+      updateTask(id, { completed }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", userData?.id] });
+      if (variables.completed) {
+        setShowConfetti(true);
+      }
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: apiDeleteTask,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", userData?.id] });
+    },
+  });
 
   const handleAddTask = (category: string) => {
     const text = newTaskText[category]?.trim();
     if (!text) return;
 
-    addTask({
-      user: data.currentUser,
-      text,
-      category,
-    });
-
+    createTaskMutation.mutate({ text, category });
     setNewTaskText({ ...newTaskText, [category]: "" });
-    setShowConfetti(true);
   };
 
   const handleToggle = (id: string) => {
-    const task = data.tasks.find((t) => t.id === id);
+    const task = tasks.find((t) => t.id === id);
     if (task) {
-      updateTask(id, { completed: !task.completed });
-      if (!task.completed) {
-        setShowConfetti(true);
-      }
+      updateTaskMutation.mutate({ id, completed: !task.completed });
     }
   };
 
   const handleDelete = (id: string) => {
-    deleteTask(id);
+    deleteTaskMutation.mutate(id);
   };
 
   return (
@@ -77,7 +104,7 @@ export default function Plan() {
       <div className="max-w-6xl mx-auto p-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {CATEGORIES.map((category, index) => {
-            const categoryTasks = data.tasks.filter(
+            const categoryTasks = tasks.filter(
               (t) => t.category === category.name
             );
 

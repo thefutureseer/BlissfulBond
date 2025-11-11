@@ -3,8 +3,13 @@ import MomentCard from "../MomentCard";
 export default function MomentCardExample() {
   const sampleMoment = {
     id: "1",
-    user: "daniel" as const,
+    userId: "user1",
     content: "The way you smiled at me this morning made my heart skip a beat. Can't wait for our dinner date tonight!",
+    sentiment: {
+      score: 0.9,
+      label: "very positive",
+      emotions: ["joy", "love", "excitement"],
+    },
     createdAt: new Date().toISOString(),
   };
 

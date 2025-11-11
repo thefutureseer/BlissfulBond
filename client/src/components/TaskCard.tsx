@@ -3,7 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Trash2, Edit } from "lucide-react";
 import { motion } from "framer-motion";
-import type { Task } from "@/lib/localStorage";
+import type { Task } from "@/lib/api";
 
 interface TaskCardProps {
   task: Task;
