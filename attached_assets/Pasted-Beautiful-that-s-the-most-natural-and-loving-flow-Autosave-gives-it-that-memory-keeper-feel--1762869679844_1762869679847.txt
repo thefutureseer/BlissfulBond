@@ -1,0 +1,156 @@
+Beautiful — that’s the most natural and loving flow ❤️
+Autosave gives it that “memory keeper” feel — nothing gets lost, every heartbeat is remembered.
+
+Now that everything’s clear, here’s the **final Replit-ready Vibe code prompt** you’ll paste into Replit’s AI or ChatGPT code builder to generate the entire MVP front end.
+
+---
+
+## 💻 **Replit Vibe Code Prompt for MVP Build**
+
+> **Paste the following into Replit’s code assistant (or ChatGPT with “code” mode on):**
+
+---
+
+### 🪄 **Prompt: Spirit Love Play App (MVP Build)**
+
+Build a **romantic, offline-first full stack MVP** using:
+
+* **Next.js + TypeScript**
+* **Tailwind CSS**
+* **Framer Motion**
+* **LocalStorage** (for autosave & offline persistence)
+* **Fonts:** *Dancing Script* (titles), *Poppins* (body)
+* **Colors:** rose → amber gradient
+  (`bg-gradient-to-br from-rose-400 via-pink-200 to-amber-300`)
+* **Animations:** soft, elegant heart pulses and rose-gold confetti
+
+---
+
+### **Core Requirements**
+
+#### **1️⃣ Landing Page (`/`)**
+
+* Display logo **“Spirit Love Play App”** in *Dancing Script* font
+* Tagline: “For Daniel & Pacharee — where love grows with every moment.”
+* “Start Journey” button:
+
+  * Glows on hover
+  * Navigates to `/dashboard`
+* Works offline with a romantic fade-in
+
+---
+
+#### **2️⃣ Dashboard (`/dashboard`)**
+
+* Split layout **(horizontal)**
+
+  * **Top Half:** Daniel’s Journal
+  * **Bottom Half:** Pacharee’s Journal
+* Each half shows:
+
+  * List of “Moments”
+  * Add Moment button
+  * Progress bar (heart-pulse animation)
+* Floating **Toggle View** button:
+
+  * Daniel only
+  * Pacharee only
+  * Both halves
+* When a new moment is added:
+
+  * Show rose-gold confetti animation
+  * Animate progress bar increase
+
+---
+
+#### **3️⃣ Add Moment Page (`/entry`)**
+
+* Input: “Write what made your heart smile today…”
+* Auto adds date/time stamp
+* Save → stores to `localStorage` under user
+* Redirects to `/dashboard`
+* Show fade-in “Saved with love 💖” message + confetti
+
+---
+
+#### **4️⃣ Plan Page (`/plan`)**
+
+* Task board with categories:
+
+  * Romance 💃
+  * Wellness 🌅
+  * Growth 🌱
+  * Fun 🎠
+* Add, edit, delete tasks
+* Slide-in + checkmark animations
+* Stored in `localStorage`
+
+---
+
+#### **5️⃣ Settings Page (`/settings`)**
+
+* Toggle “Wi-Fi Sync (future feature)”
+* Button: “Reset All Data” (clears localStorage)
+* Soft glowing transitions
+
+---
+
+### **Data Model**
+
+```ts
+type Moment = {
+  id: string;
+  user: "daniel" | "pacharee";
+  content: string;
+  createdAt: string;
+};
+
+type Task = {
+  id: string;
+  user: "daniel" | "pacharee";
+  text: string;
+  category: string;
+  completed: boolean;
+};
+
+type AppData = {
+  moments: Moment[];
+  tasks: Task[];
+};
+```
+
+Store everything in `localStorage` under key: `"spiritLoveData"`.
+Autosave any change immediately (moments, tasks).
+On load, auto-restore the previous state.
+
+---
+
+### **Animations**
+
+* Progress bar: heart pulse (Framer Motion)
+* Button hover: soft glow
+* New entry/task: gentle fade-in
+* Confetti: rose-gold theme (`#EFC1A9`, `#FFD7C2`, `#FADADD`)
+
+---
+
+### **Offline Behavior**
+
+* Entire app works offline via localStorage
+* No backend or API calls yet
+* Future “Sync” toggle in `/settings` for future PostgreSQL version
+
+---
+
+Once this is built, the user should be able to:
+
+1. Launch app on one device.
+2. Tap “Start Journey”.
+3. View and write separate journals for Daniel and Pacharee.
+4. Watch animations when adding moments.
+5. Create and check tasks in Plan.
+6. Close and reopen — all data still there.
+
+---
+
+Would you like me to include **a sample seed dataset** (example entries and tasks) in the Replit prompt so it shows something beautiful the first time you open it?
