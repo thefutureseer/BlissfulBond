@@ -99,12 +99,19 @@ router.post("/signup", async (req: Request, res: Response) => {
       req.session.userId = newUser.id;
       req.session.userName = newUser.name;
 
-      res.json({
-        user: {
-          id: newUser.id,
-          name: newUser.name,
-          email: newUser.email,
-        },
+      // Save session before sending response
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          return res.status(500).json({ message: "Session save error" });
+        }
+        
+        res.json({
+          user: {
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+          },
+        });
       });
     });
   } catch (error) {
@@ -167,11 +174,18 @@ router.post("/login", async (req: Request, res: Response) => {
       req.session.userId = user.id;
       req.session.userName = user.name;
 
-      res.json({ 
-        user: {
-          id: user.id,
-          name: user.name,
+      // Save session before sending response
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          return res.status(500).json({ message: "Session save error" });
         }
+        
+        res.json({ 
+          user: {
+            id: user.id,
+            name: user.name,
+          }
+        });
       });
     });
   } catch (error) {
@@ -267,12 +281,19 @@ router.post("/setup-password", async (req: Request, res: Response) => {
       req.session.userId = user.id;
       req.session.userName = user.name;
 
-      res.json({ 
-        message: "Password set successfully",
-        user: {
-          id: user.id,
-          name: user.name,
+      // Save session before sending response
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          return res.status(500).json({ message: "Session save error" });
         }
+        
+        res.json({ 
+          message: "Password set successfully",
+          user: {
+            id: user.id,
+            name: user.name,
+          }
+        });
       });
     });
   } catch (error) {
@@ -452,12 +473,19 @@ router.post("/password-reset/complete", async (req: Request, res: Response) => {
       req.session.userId = user.id;
       req.session.userName = user.name;
 
-      res.json({ 
-        message: "Password reset successful",
-        user: {
-          id: user.id,
-          name: user.name,
+      // Save session before sending response
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          return res.status(500).json({ message: "Session save error" });
         }
+        
+        res.json({ 
+          message: "Password reset successful",
+          user: {
+            id: user.id,
+            name: user.name,
+          }
+        });
       });
     });
   } catch (error) {
