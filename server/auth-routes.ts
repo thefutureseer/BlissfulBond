@@ -10,6 +10,12 @@ import {
 import { db } from "./db.js";
 import { users } from "../shared/schema.js";
 import { eq } from "drizzle-orm";
+import {
+  createPasswordResetToken,
+  validateResetToken,
+  resetPasswordWithToken,
+} from "./password-reset.js";
+import { sendPasswordResetEmail } from "./email-service.js";
 
 const router = Router();
 
@@ -26,6 +32,19 @@ const setupPasswordSchema = z.object({
 
 const changePasswordSchema = z.object({
   currentPassword: z.string(),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+const requestResetSchema = z.object({
+  name: z.enum(["daniel", "pacharee"]),
+});
+
+const validateTokenSchema = z.object({
+  token: z.string().min(1),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
   newPassword: z.string().min(8, "Password must be at least 8 characters"),
 });
 
@@ -236,6 +255,130 @@ router.get("/check-setup/:name", async (req: Request, res: Response) => {
     userId: user.id,
     needsSetup: !user.hasPassword,
   });
+});
+
+/**
+ * POST /api/auth/password-reset/request
+ * Request a password reset email with magic link
+ * Returns generic success to prevent user enumeration
+ */
+router.post("/password-reset/request", async (req: Request, res: Response) => {
+  try {
+    const { name } = requestResetSchema.parse(req.body);
+
+    const resetToken = await createPasswordResetToken(name);
+    
+    if (resetToken) {
+      await sendPasswordResetEmail(name, resetToken);
+    }
+
+    res.json({ 
+      message: "If an account exists, a password reset email has been sent." 
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: "Invalid request",
+        errors: error.errors 
+      });
+    }
+    console.error("Password reset request error:", error);
+    res.json({ 
+      message: "If an account exists, a password reset email has been sent." 
+    });
+  }
+});
+
+/**
+ * POST /api/auth/password-reset/validate
+ * Validate a reset token without consuming it
+ * Used to check if token is valid before showing reset form
+ */
+router.post("/password-reset/validate", async (req: Request, res: Response) => {
+  try {
+    const { token } = validateTokenSchema.parse(req.body);
+
+    const validUser = await validateResetToken(token);
+    
+    if (!validUser) {
+      return res.status(400).json({ 
+        message: "Invalid or expired reset link" 
+      });
+    }
+
+    res.json({ 
+      valid: true,
+      userName: validUser.userName 
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: "Invalid request",
+        errors: error.errors 
+      });
+    }
+    res.status(400).json({ 
+      message: "Invalid or expired reset link" 
+    });
+  }
+});
+
+/**
+ * POST /api/auth/password-reset/complete
+ * Complete password reset with new password
+ * Validates token, updates password, and creates session
+ */
+router.post("/password-reset/complete", async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = resetPasswordSchema.parse(req.body);
+
+    const result = await resetPasswordWithToken(token, newPassword);
+    
+    if (!result.success) {
+      return res.status(400).json({ 
+        message: "Invalid or expired reset link" 
+      });
+    }
+
+    const [user] = await db
+      .select({
+        id: users.id,
+        name: users.name,
+      })
+      .from(users)
+      .where(eq(users.id, result.userId!))
+      .limit(1);
+
+    if (!user) {
+      return res.status(500).json({ message: "User not found" });
+    }
+
+    req.session.regenerate((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Session error" });
+      }
+
+      req.session.userId = user.id;
+      req.session.userName = user.name;
+
+      res.json({ 
+        message: "Password reset successful",
+        user: {
+          id: user.id,
+          name: user.name,
+        }
+      });
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: "Invalid request",
+        errors: error.errors 
+      });
+    }
+    console.error("Password reset complete error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 export default router;
