@@ -48,7 +48,7 @@ export default function Landing() {
         >
           <Button
             size="lg"
-            onClick={() => setLocation("/dashboard")}
+            onClick={() => setLocation("/login")}
             className="bg-white text-rose-600 hover:bg-white/90 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all"
             data-testid="button-start-journey"
           >

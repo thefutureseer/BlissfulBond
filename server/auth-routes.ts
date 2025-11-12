@@ -45,15 +45,22 @@ router.post("/login", async (req: Request, res: Response) => {
       });
     }
 
-    // Create session
-    req.session.userId = user.id;
-    req.session.userName = user.name;
-
-    res.json({ 
-      user: {
-        id: user.id,
-        name: user.name,
+    // Regenerate session to prevent session fixation attacks
+    req.session.regenerate((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Session error" });
       }
+
+      // Create new session with user data
+      req.session.userId = user.id;
+      req.session.userName = user.name;
+
+      res.json({ 
+        user: {
+          id: user.id,
+          name: user.name,
+        }
+      });
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -130,7 +137,7 @@ router.post("/setup-password", async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if password already set
+    // Check if password already set (prevent account takeover)
     if (user.passwordHash) {
       return res.status(400).json({ 
         message: "Password already set. Use change password instead." 
@@ -139,16 +146,22 @@ router.post("/setup-password", async (req: Request, res: Response) => {
 
     await setUserPassword(userId, password);
 
-    // Auto-login after setup
-    req.session.userId = user.id;
-    req.session.userName = user.name;
-
-    res.json({ 
-      message: "Password set successfully",
-      user: {
-        id: user.id,
-        name: user.name,
+    // Regenerate session and auto-login after setup
+    req.session.regenerate((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Session error" });
       }
+
+      req.session.userId = user.id;
+      req.session.userName = user.name;
+
+      res.json({ 
+        message: "Password set successfully",
+        user: {
+          id: user.id,
+          name: user.name,
+        }
+      });
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

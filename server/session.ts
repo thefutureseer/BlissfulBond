@@ -18,6 +18,7 @@ export const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || "spirit-love-play-secret-change-in-production",
   resave: false,
   saveUninitialized: false,
+  rolling: true, // Regenerate session ID on each request
   cookie: {
     secure: process.env.NODE_ENV === "production", // HTTPS only in production
     httpOnly: true, // Prevent XSS attacks

@@ -2,39 +2,91 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Wifi, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Lock, LogOut, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
-import { resetData } from "@/lib/localStorage";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Settings() {
   const [, setLocation] = useLocation();
-  const [wifiSync, setWifiSync] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  const handleReset = () => {
-    resetData();
-    setLocation("/dashboard");
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      const response = await apiRequest("POST", "/api/auth/change-password", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password changed! 🔒",
+        description: "Your password has been updated successfully",
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to change password",
+        description: error.message || "Current password is incorrect",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/logout");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      setLocation("/login");
+    },
+  });
+
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Password too short",
+        description: "New password must be at least 8 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please ensure both passwords are the same",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    changePasswordMutation.mutate({
+      currentPassword,
+      newPassword,
+    });
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
+      <header className="border-b bg-card sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation("/plan")}
+            onClick={() => setLocation("/dashboard")}
             data-testid="button-back"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -51,71 +103,102 @@ export default function Settings() {
         className="max-w-2xl mx-auto p-4 py-8 space-y-6"
       >
         <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Wifi className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">Wi-Fi Sync</p>
-                <p className="text-sm text-muted-foreground">
-                  Future feature - Coming soon
-                </p>
-              </div>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Lock className="w-5 h-5" />
+            Change Password
+          </h2>
+          
+          <form onSubmit={handleChangePassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Current Password</Label>
+              <Input
+                id="current-password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                data-testid="input-current-password"
+                required
+              />
             </div>
-            <Switch
-              checked={wifiSync}
-              onCheckedChange={setWifiSync}
-              disabled
-              data-testid="toggle-wifi-sync"
-            />
+
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min 8 characters)"
+                data-testid="input-new-password"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm New Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                data-testid="input-confirm-password"
+                required
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={changePasswordMutation.isPending}
+              data-testid="button-change-password"
+            >
+              {changePasswordMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Changing password...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Change Password
+                </>
+              )}
+            </Button>
+          </form>
+
+          <div className="mt-4 text-xs text-muted-foreground space-y-1">
+            <p>🔒 Passwords are secured with bcrypt (cost factor 12)</p>
+            <p>Your password is hashed and never stored in plain text</p>
           </div>
         </Card>
 
-        <Card className="p-6 border-destructive/20">
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <Trash2 className="w-5 h-5 text-destructive mt-1" />
-              <div className="flex-1">
-                <p className="font-medium text-destructive">Danger Zone</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  This will permanently delete all your moments and tasks. This
-                  action cannot be undone.
-                </p>
-              </div>
-            </div>
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  data-testid="button-reset-data"
-                >
-                  Reset All Data
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete all moments and tasks for both
-                    Daniel and Pacharee. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel data-testid="button-cancel-reset">
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleReset}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    data-testid="button-confirm-reset"
-                  >
-                    Reset Everything
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <LogOut className="w-5 h-5" />
+            Session
+          </h2>
+          
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            data-testid="button-logout"
+          >
+            {logoutMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Logging out...
+              </>
+            ) : (
+              <>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </>
+            )}
+          </Button>
         </Card>
 
         <div className="text-center text-sm text-muted-foreground">
