@@ -59,12 +59,37 @@ Preferred communication style: Simple, everyday language.
 - Schema-first approach with automatic TypeScript type inference
 
 **Data Models**
-- **Users**: Stores Daniel and Pacharee's profiles with auto-generated UUIDs
+- **Users**: Stores Daniel and Pacharee's profiles with auto-generated UUIDs, bcrypt-hashed passwords, and password reset tokens
 - **Moments**: Journal entries with content, timestamps, and AI-analyzed sentiment
 - **Tasks**: Categorized action items with completion status
+- **Emotion Logs**: Emotional check-ins with intensity tracking
+
+**Authentication & Security**
+- Password-based authentication with bcrypt hashing (cost factor 12)
+- Express session management with PostgreSQL session store
+- Password reset via email magic links with:
+  - 32-byte cryptographically secure tokens
+  - SHA-256 hashing before storage
+  - 1-hour expiration window
+  - Single-use tokens (cleared after successful reset)
+  - Generic error messages to prevent user enumeration
+  - Automatic session creation after password reset
 
 **API Design**
 - RESTful endpoints following resource-based patterns
+
+Authentication Endpoints:
+- POST `/api/auth/login` - Authenticate user and create session
+- POST `/api/auth/logout` - Destroy session
+- GET `/api/auth/me` - Get current authenticated user
+- POST `/api/auth/setup-password` - Initial password setup for new users
+- POST `/api/auth/change-password` - Change password for authenticated users
+- GET `/api/auth/check-setup/:name` - Check if user needs password setup
+- POST `/api/auth/password-reset/request` - Request password reset email
+- POST `/api/auth/password-reset/validate` - Validate reset token
+- POST `/api/auth/password-reset/complete` - Complete password reset with new password
+
+Data Endpoints:
 - POST `/api/users/:name` - Get or create user by name
 - GET `/api/users/:userId/moments` - Retrieve user's moments
 - POST `/api/moments` - Create moment with automatic sentiment analysis
