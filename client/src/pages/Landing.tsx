@@ -1,10 +1,8 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
 import { Sparkles, Heart } from "lucide-react";
 
 export default function Landing() {
-  const [, setLocation] = useLocation();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-400 via-pink-200 to-amber-300 flex items-center justify-center p-4">
@@ -48,11 +46,11 @@ export default function Landing() {
         >
           <Button
             size="lg"
-            onClick={() => setLocation("/login")}
+            onClick={() => window.location.href = "/api/login"}
             className="bg-white text-rose-600 hover:bg-white/90 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all"
-            data-testid="button-our-journey"
+            data-testid="button-login"
           >
-            Our Journey
+            Login with Replit
           </Button>
         </motion.div>
 

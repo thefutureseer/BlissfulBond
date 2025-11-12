@@ -1,15 +1,10 @@
 import { createContext, useContext, ReactNode, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-
-interface AuthUser {
-  id: string;
-  name: string;
-  needsPasswordSetup: boolean;
-}
+import type { User } from "@shared/schema";
 
 interface AuthContextType {
-  user: AuthUser | null;
+  user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -20,9 +15,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [location] = useLocation();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/auth/me"],
+    queryKey: ["/api/me"],
     queryFn: async () => {
-      const response = await fetch("/api/auth/me", {
+      const response = await fetch("/api/me", {
         credentials: "include",
       });
       
@@ -30,8 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
       
-      const json = await response.json();
-      return json.user as AuthUser;
+      return await response.json() as User;
     },
     retry: false,
     staleTime: Infinity,
@@ -61,7 +55,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      setLocation("/login");
+      setLocation("/");
     }
   }, [isLoading, isAuthenticated, setLocation]);
 

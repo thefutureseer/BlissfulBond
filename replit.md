@@ -7,12 +7,16 @@ Spirit Love Play is a romantic relationship journaling and task management appli
 The application is built as a full-stack web application with offline-first capabilities, allowing users to maintain their relationship journal and tasks even without an internet connection. It emphasizes a romantic, elegant user experience with custom animations, gradient backgrounds, and thoughtful visual details.
 
 **Recent Updates (Nov 12, 2025)**:
-- Implemented dynamic user registration with email-based authentication
-- Users can sign up with name, email, and password
-- Login page dynamically displays all registered users as cards (newest on top)
-- Password reset flow uses email addresses instead of hardcoded usernames
-- Removed automatic seeding - fully dynamic user management
-- Integrated Resend for transactional email delivery
+- **MAJOR**: Migrated to Replit Auth for social authentication
+  - Replaced custom email/password auth with Replit OIDC
+  - Users now login with Google, GitHub, Apple, or X accounts
+  - No custom domain required for social login
+  - Automatic user profile sync (email, first name, last name, profile image)
+- Updated database schema for Replit Auth compatibility
+  - Users table: firstName, lastName, profileImageUrl (removed password fields)
+  - Sessions table with PostgreSQL store for Replit Auth
+- Landing page shows "Login with Replit" button for unauthenticated users
+- Dashboard shown immediately after successful login
 
 ## User Preferences
 
@@ -67,43 +71,34 @@ Preferred communication style: Simple, everyday language.
 - Schema-first approach with automatic TypeScript type inference
 
 **Data Models**
-- **Users**: Stores user profiles with auto-generated UUIDs, names, unique email addresses, bcrypt-hashed passwords, and password reset tokens
+- **Users**: OIDC-based user profiles with auto-generated UUIDs, email, firstName, lastName, profileImageUrl, partnerId
+- **Sessions**: Passport session storage with expiration tracking
 - **Moments**: Journal entries with content, timestamps, and AI-analyzed sentiment
 - **Tasks**: Categorized action items with completion status
 - **Emotion Logs**: Emotional check-ins with intensity tracking
 
 **Authentication & Security**
-- Dynamic user signup with email-based authentication
-- Password-based authentication with bcrypt hashing (cost factor 12)
-- Express session management with PostgreSQL session store
-- Session data persisted before HTTP responses to prevent redirect loops
-- Password reset via email magic links with:
-  - 32-byte cryptographically secure tokens
-  - SHA-256 hashing before storage
-  - 1-hour expiration window
-  - Single-use tokens (cleared after successful reset)
-  - Generic error messages to prevent user enumeration
-  - Automatic session creation after password reset
-- Resend integration for transactional email delivery
+- Replit Auth (OIDC) for social authentication
+  - Supports Google, GitHub, Apple, and X login
+  - OpenID Connect via openid-client v6
+  - Passport.js integration for session management
+- Session management with PostgreSQL store (connect-pg-simple)
+  - 7-day session TTL
+  - Automatic token refresh when expired
+  - Secure HTTP-only cookies
+- Protected API endpoints with isAuthenticated middleware
+- Automatic user profile upsert on login (email, firstName, lastName, profileImageUrl)
 
 **API Design**
 - RESTful endpoints following resource-based patterns
 
-Authentication Endpoints:
-- POST `/api/auth/signup` - Create new user account with email and password
-- POST `/api/auth/login` - Authenticate user and create session
-- POST `/api/auth/logout` - Destroy session
-- GET `/api/auth/me` - Get current authenticated user
-- GET `/api/auth/users` - Get all users (for login page display)
-- POST `/api/auth/setup-password` - Initial password setup for new users
-- POST `/api/auth/change-password` - Change password for authenticated users
-- GET `/api/auth/check-setup/:name` - Check if user needs password setup
-- POST `/api/auth/password-reset/request` - Request password reset email
-- POST `/api/auth/password-reset/validate` - Validate reset token
-- POST `/api/auth/password-reset/complete` - Complete password reset with new password
+Authentication Endpoints (Replit Auth):
+- GET `/api/login` - Initiate Replit OIDC login flow
+- GET `/api/callback` - OIDC callback handler (processes authorization code)
+- GET `/api/logout` - End session and redirect to OIDC logout
+- GET `/api/me` - Get current authenticated user profile
 
 Data Endpoints:
-- POST `/api/users/:name` - Get or create user by name (legacy)
 - GET `/api/users/:userId/moments` - Retrieve user's moments
 - POST `/api/moments` - Create moment with automatic sentiment analysis
 - GET `/api/users/:userId/tasks` - Retrieve user's tasks

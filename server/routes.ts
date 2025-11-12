@@ -1,18 +1,15 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { analyzeSentiment } from "./sentiment";
 import { insertMomentSchema, insertTaskSchema, insertEmotionLogSchema } from "@shared/schema";
-import { sessionMiddleware } from "./session.js";
-import authRoutes from "./auth-routes.js";
+import { setupAuth, isAuthenticated } from "./replitAuth.js";
 import { z } from "zod";
 
-// Auth middleware to protect routes
-function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.session.userId) {
-    return res.status(401).json({ message: "Authentication required" });
-  }
-  next();
+// Helper to get user ID from Replit Auth session
+function getUserId(req: Request): string {
+  const user = req.user as any;
+  return user?.claims?.sub;
 }
 
 // Helper function to check if two users are partners in this couple's app
@@ -29,21 +26,28 @@ async function arePartners(userId1: string, userId2: string): Promise<boolean> {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Add session middleware
-  app.use(sessionMiddleware);
+  // Set up Replit Auth (handles sessions, login, logout, callback)
+  await setupAuth(app);
 
-  // Auth routes (public)
-  app.use("/api/auth", authRoutes);
-  
-  // REMOVED: POST /api/users/:name auto-create endpoint
-  // Users are pre-seeded via seed script only
-  // This prevents unauthorized account creation
+  // Get current user endpoint
+  app.get("/api/me", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // Get moments for a user (protected)
-  app.get("/api/users/:userId/moments", requireAuth, async (req, res) => {
+  app.get("/api/users/:userId/moments", isAuthenticated, async (req, res) => {
     try {
       const { userId } = req.params;
-      const sessionUserId = req.session.userId!;
+      const sessionUserId = getUserId(req);
       
       // Allow access if requesting own data OR if requesting partner's data
       const isOwnData = userId === sessionUserId;
@@ -61,12 +65,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new moment with sentiment analysis (protected)
-  app.post("/api/moments", requireAuth, async (req, res) => {
+  app.post("/api/moments", isAuthenticated, async (req, res) => {
     try {
       const data = insertMomentSchema.parse(req.body);
       
       // Authorization check: user can only create moments for themselves
-      if (data.userId !== req.session.userId) {
+      if (data.userId !== getUserId(req)) {
         return res.status(403).json({ error: "Access denied" });
       }
       
@@ -85,10 +89,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get tasks for a user (protected)
-  app.get("/api/users/:userId/tasks", requireAuth, async (req, res) => {
+  app.get("/api/users/:userId/tasks", isAuthenticated, async (req, res) => {
     try {
       const { userId } = req.params;
-      const sessionUserId = req.session.userId!;
+      const sessionUserId = getUserId(req);
       
       // Allow access if requesting own data OR if requesting partner's data
       const isOwnData = userId === sessionUserId;
@@ -106,12 +110,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new task (protected)
-  app.post("/api/tasks", requireAuth, async (req, res) => {
+  app.post("/api/tasks", isAuthenticated, async (req, res) => {
     try {
       const data = insertTaskSchema.parse(req.body);
       
       // Authorization check: user can only create tasks for themselves
-      if (data.userId !== req.session.userId) {
+      if (data.userId !== getUserId(req)) {
         return res.status(403).json({ error: "Access denied" });
       }
       
@@ -123,12 +127,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a task (protected)
-  app.patch("/api/tasks/:id", requireAuth, async (req, res) => {
+  app.patch("/api/tasks/:id", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
       
       // First get the task to verify ownership
-      const tasks = await storage.getTasksByUser(req.session.userId!);
+      const tasks = await storage.getTasksByUser(getUserId(req));
       const existingTask = tasks.find(t => t.id === id);
       
       if (!existingTask) {
@@ -151,12 +155,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a task (protected)
-  app.delete("/api/tasks/:id", requireAuth, async (req, res) => {
+  app.delete("/api/tasks/:id", isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
       
       // First get the task to verify ownership
-      const tasks = await storage.getTasksByUser(req.session.userId!);
+      const tasks = await storage.getTasksByUser(getUserId(req));
       const existingTask = tasks.find(t => t.id === id);
       
       if (!existingTask) {
@@ -171,12 +175,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create emotion log (protected)
-  app.post("/api/emotions", requireAuth, async (req, res) => {
+  app.post("/api/emotions", isAuthenticated, async (req, res) => {
     try {
       const data = insertEmotionLogSchema.parse(req.body);
       
       // Authorization check: user can only create emotion logs for themselves
-      if (data.userId !== req.session.userId) {
+      if (data.userId !== getUserId(req)) {
         return res.status(403).json({ error: "Access denied" });
       }
       

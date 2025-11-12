@@ -3,7 +3,7 @@ import { Pool, neonConfig } from "@neondatabase/serverless";
 import ws from "ws";
 import { eq } from "drizzle-orm";
 import * as schema from "@shared/schema";
-import type { User, InsertUser, Moment, InsertMoment, Task, InsertTask, EmotionLog, InsertEmotionLog } from "@shared/schema";
+import type { User, UpsertUser, Moment, InsertMoment, Task, InsertTask, EmotionLog, InsertEmotionLog } from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
@@ -13,8 +13,7 @@ const db = drizzle({ client: pool, schema });
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
-  getUserByName(name: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  upsertUser(user: UpsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   
   // Moments
@@ -37,14 +36,19 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async getUserByName(name: string): Promise<User | undefined> {
-    const result = await db.select().from(schema.users).where(eq(schema.users.name, name));
-    return result[0];
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const result = await db.insert(schema.users).values(insertUser).returning();
-    return result[0];
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(schema.users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: schema.users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
