@@ -80,7 +80,8 @@ Preferred communication style: Simple, everyday language.
 **Authentication & Security**
 - Replit Auth (OIDC) for social authentication
   - Supports Google, GitHub, Apple, and X login
-  - OpenID Connect via openid-client v6
+  - OpenID Connect via openid-client v5 (with built-in Passport Strategy)
+  - Public client configuration (no client_secret required)
   - Passport.js integration for session management
 - Session management with PostgreSQL store (connect-pg-simple)
   - 7-day session TTL
