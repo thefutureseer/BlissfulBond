@@ -9,6 +9,9 @@ export const users = pgTable("users", {
   partnerId: varchar("partner_id"),
   passwordHash: text("password_hash"),
   passwordUpdatedAt: timestamp("password_updated_at"),
+  resetTokenHash: text("reset_token_hash"),
+  resetTokenExpiresAt: timestamp("reset_token_expires_at"),
+  resetTokenIssuedAt: timestamp("reset_token_issued_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
