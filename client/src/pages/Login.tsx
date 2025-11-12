@@ -7,6 +7,7 @@ import { Heart, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 type User = "daniel" | "pacharee";
 
@@ -29,6 +30,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [userId, setUserId] = useState("");
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -52,8 +54,9 @@ export default function Login() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Welcome back! 💖",
-        description: "Logged in successfully",
+        description: "Now share your vibe",
       });
+      setTimeout(() => setLocation("/emotions"), 500);
     },
     onError: () => {
       toast({
@@ -73,8 +76,9 @@ export default function Login() {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Password set! 💖",
-        description: "Your account is now secured",
+        description: "Now share your vibe",
       });
+      setTimeout(() => setLocation("/emotions"), 500);
     },
   });
 

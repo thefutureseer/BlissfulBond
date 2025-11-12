@@ -3,7 +3,7 @@ import { Pool, neonConfig } from "@neondatabase/serverless";
 import ws from "ws";
 import { eq } from "drizzle-orm";
 import * as schema from "@shared/schema";
-import type { User, InsertUser, Moment, InsertMoment, Task, InsertTask } from "@shared/schema";
+import type { User, InsertUser, Moment, InsertMoment, Task, InsertTask, EmotionLog, InsertEmotionLog } from "@shared/schema";
 
 neonConfig.webSocketConstructor = ws;
 
@@ -25,6 +25,9 @@ export interface IStorage {
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, updates: Partial<Task>): Promise<Task | undefined>;
   deleteTask(id: string): Promise<void>;
+  
+  // Emotion Logs
+  createEmotionLog(emotionLog: InsertEmotionLog): Promise<EmotionLog>;
 }
 
 export class DbStorage implements IStorage {
@@ -72,6 +75,11 @@ export class DbStorage implements IStorage {
 
   async deleteTask(id: string): Promise<void> {
     await db.delete(schema.tasks).where(eq(schema.tasks.id, id));
+  }
+
+  async createEmotionLog(emotionLog: InsertEmotionLog): Promise<EmotionLog> {
+    const result = await db.insert(schema.emotionLogs).values(emotionLog).returning();
+    return result[0];
   }
 }
 

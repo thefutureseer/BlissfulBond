@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, json } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, json, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -32,6 +32,14 @@ export const tasks = pgTable("tasks", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const emotionLogs = pgTable("emotion_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  emotion: text("emotion").notNull(),
+  intensity: integer("intensity").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   name: true,
 });
@@ -47,6 +55,12 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   category: true,
 });
 
+export const insertEmotionLogSchema = createInsertSchema(emotionLogs).pick({
+  userId: true,
+  emotion: true,
+  intensity: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -55,3 +69,6 @@ export type Moment = typeof moments.$inferSelect;
 
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
+
+export type InsertEmotionLog = z.infer<typeof insertEmotionLogSchema>;
+export type EmotionLog = typeof emotionLogs.$inferSelect;

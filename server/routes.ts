@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { analyzeSentiment } from "./sentiment";
-import { insertMomentSchema, insertTaskSchema } from "@shared/schema";
+import { insertMomentSchema, insertTaskSchema, insertEmotionLogSchema } from "@shared/schema";
 import { sessionMiddleware } from "./session.js";
 import authRoutes from "./auth-routes.js";
 import { z } from "zod";
@@ -157,6 +157,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create emotion log (protected)
+  app.post("/api/emotions", requireAuth, async (req, res) => {
+    try {
+      const data = insertEmotionLogSchema.parse(req.body);
+      
+      // Authorization check: user can only create emotion logs for themselves
+      if (data.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const emotionLog = await storage.createEmotionLog(data);
+      res.json(emotionLog);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   });
 
