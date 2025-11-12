@@ -15,6 +15,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByName(name: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   
   // Moments
   getMomentsByUser(userId: string): Promise<Moment[]>;
@@ -43,6 +44,15 @@ export class DbStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const result = await db.insert(schema.users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const result = await db
+      .update(schema.users)
+      .set(updates)
+      .where(eq(schema.users.id, id))
+      .returning();
     return result[0];
   }
 

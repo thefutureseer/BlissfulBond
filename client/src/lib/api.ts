@@ -52,7 +52,12 @@ export async function getOrCreateUser(user: User): Promise<UserData> {
 }
 
 export async function getUserMoments(userId: string): Promise<Moment[]> {
-  const response = await fetch(`/api/users/${userId}/moments`);
+  const response = await fetch(`/api/users/${userId}/moments`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    return [];
+  }
   return response.json();
 }
 
@@ -62,7 +67,12 @@ export async function createMoment(userId: string, content: string): Promise<Mom
 }
 
 export async function getUserTasks(userId: string): Promise<Task[]> {
-  const response = await fetch(`/api/users/${userId}/tasks`);
+  const response = await fetch(`/api/users/${userId}/tasks`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    return [];
+  }
   return response.json();
 }
 

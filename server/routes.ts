@@ -15,6 +15,19 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Helper function to check if two users are partners in this couple's app
+async function arePartners(userId1: string, userId2: string): Promise<boolean> {
+  // Get both users
+  const user1 = await storage.getUser(userId1);
+  const user2 = await storage.getUser(userId2);
+  
+  if (!user1 || !user2) return false;
+  
+  // Check if they have partner IDs set and they mutually reference each other
+  // This is the ONLY way to establish a partner relationship (no auto-linking)
+  return user1.partnerId === userId2 && user2.partnerId === userId1;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add session middleware
   app.use(sessionMiddleware);
@@ -41,9 +54,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/:userId/moments", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
+      const sessionUserId = req.session.userId!;
       
-      // Authorization check: user can only access their own data
-      if (userId !== req.session.userId) {
+      // Allow access if requesting own data OR if requesting partner's data
+      const isOwnData = userId === sessionUserId;
+      const isPartnerData = await arePartners(sessionUserId, userId);
+      
+      if (!isOwnData && !isPartnerData) {
         return res.status(403).json({ error: "Access denied" });
       }
       
@@ -82,9 +99,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/:userId/tasks", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
+      const sessionUserId = req.session.userId!;
       
-      // Authorization check: user can only access their own data
-      if (userId !== req.session.userId) {
+      // Allow access if requesting own data OR if requesting partner's data
+      const isOwnData = userId === sessionUserId;
+      const isPartnerData = await arePartners(sessionUserId, userId);
+      
+      if (!isOwnData && !isPartnerData) {
         return res.status(403).json({ error: "Access denied" });
       }
       
