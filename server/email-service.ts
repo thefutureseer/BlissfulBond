@@ -1,11 +1,9 @@
 /**
  * Email service for sending password reset magic links
- * 
- * For development: Logs email to console
- * For production: Configure with a transactional email provider
- * (e.g., Resend, Mailgun, SendGrid)
+ * Uses Resend for transactional email delivery
  */
 
+import { Resend } from 'resend';
 import { db } from "./db.js";
 import { users } from "../shared/schema.js";
 import { eq } from "drizzle-orm";
@@ -15,6 +13,48 @@ interface EmailConfig {
   subject: string;
   html: string;
   text: string;
+}
+
+/**
+ * Get Resend client with credentials from Replit connector
+ */
+async function getResendClient() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY 
+    ? 'repl ' + process.env.REPL_IDENTITY 
+    : process.env.WEB_REPL_RENEWAL 
+    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
+    : null;
+
+  if (!xReplitToken || !hostname) {
+    console.warn('Resend connector not available, will log to console instead');
+    return null;
+  }
+
+  try {
+    const connectionSettings = await fetch(
+      'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'X_REPLIT_TOKEN': xReplitToken
+        }
+      }
+    ).then(res => res.json()).then(data => data.items?.[0]);
+
+    if (!connectionSettings || !connectionSettings.settings.api_key) {
+      console.warn('Resend not connected, will log to console instead');
+      return null;
+    }
+
+    return {
+      client: new Resend(connectionSettings.settings.api_key),
+      fromEmail: connectionSettings.settings.from_email || 'Spirit Love Play <noreply@spiritloveplay.app>'
+    };
+  } catch (error) {
+    console.warn('Error fetching Resend credentials:', error);
+    return null;
+  }
 }
 
 /**
@@ -45,15 +85,32 @@ export async function sendPasswordResetEmail(
     text: generateResetEmailText(recipientName, resetUrl),
   };
 
-  if (process.env.NODE_ENV === "production" && process.env.EMAIL_API_KEY) {
-    await sendViaEmailProvider(emailConfig);
+  // Try to send via Resend
+  const resendClient = await getResendClient();
+  
+  if (resendClient) {
+    try {
+      await resendClient.client.emails.send({
+        from: resendClient.fromEmail,
+        to: emailConfig.to,
+        subject: emailConfig.subject,
+        html: emailConfig.html,
+        text: emailConfig.text,
+      });
+      console.log(`✅ Password reset email sent to ${emailConfig.to}`);
+    } catch (error) {
+      console.error('Error sending email via Resend:', error);
+      console.log('Falling back to console logging:');
+      logEmailToConsole(emailConfig);
+    }
   } else {
+    // Fallback to console logging in development
     logEmailToConsole(emailConfig);
   }
 }
 
 /**
- * Log email to console (development mode)
+ * Log email to console (development mode fallback)
  */
 function logEmailToConsole(config: EmailConfig): void {
   console.log("\n" + "=".repeat(80));
@@ -70,25 +127,6 @@ function logEmailToConsole(config: EmailConfig): void {
   console.log("-".repeat(80));
   console.log(config.html);
   console.log("=".repeat(80) + "\n");
-}
-
-/**
- * Send via email provider (production mode)
- * To implement: Add your preferred email service (Resend, Mailgun, etc.)
- */
-async function sendViaEmailProvider(config: EmailConfig): Promise<void> {
-  // TODO: Implement with actual email provider when ready
-  // Example with Resend:
-  // const resend = new Resend(process.env.EMAIL_API_KEY);
-  // await resend.emails.send({
-  //   from: 'Spirit Love Play <noreply@yourdomain.com>',
-  //   to: config.to,
-  //   subject: config.subject,
-  //   html: config.html,
-  // });
-  
-  console.log("Email provider not configured, logging to console instead:");
-  logEmailToConsole(config);
 }
 
 /**

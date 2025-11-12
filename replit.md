@@ -2,9 +2,17 @@
 
 ## Overview
 
-Spirit Love Play is a romantic relationship journaling and task management application designed specifically for Daniel and Pacharee. The app features a celestial, mystical theme with rose-gold aesthetics and provides tools for capturing meaningful moments, managing relationship goals, and tracking emotional sentiment through AI-powered analysis.
+Spirit Love Play is a romantic relationship journaling and task management application. The app features a celestial, mystical theme with rose-gold aesthetics and provides tools for capturing meaningful moments, managing relationship goals, and tracking emotional sentiment through AI-powered analysis.
 
 The application is built as a full-stack web application with offline-first capabilities, allowing users to maintain their relationship journal and tasks even without an internet connection. It emphasizes a romantic, elegant user experience with custom animations, gradient backgrounds, and thoughtful visual details.
+
+**Recent Updates (Nov 12, 2025)**:
+- Implemented dynamic user registration with email-based authentication
+- Users can sign up with name, email, and password
+- Login page dynamically displays all registered users as cards (newest on top)
+- Password reset flow uses email addresses instead of hardcoded usernames
+- Removed automatic seeding - fully dynamic user management
+- Integrated Resend for transactional email delivery
 
 ## User Preferences
 
@@ -59,14 +67,16 @@ Preferred communication style: Simple, everyday language.
 - Schema-first approach with automatic TypeScript type inference
 
 **Data Models**
-- **Users**: Stores Daniel and Pacharee's profiles with auto-generated UUIDs, bcrypt-hashed passwords, and password reset tokens
+- **Users**: Stores user profiles with auto-generated UUIDs, names, unique email addresses, bcrypt-hashed passwords, and password reset tokens
 - **Moments**: Journal entries with content, timestamps, and AI-analyzed sentiment
 - **Tasks**: Categorized action items with completion status
 - **Emotion Logs**: Emotional check-ins with intensity tracking
 
 **Authentication & Security**
+- Dynamic user signup with email-based authentication
 - Password-based authentication with bcrypt hashing (cost factor 12)
 - Express session management with PostgreSQL session store
+- Session data persisted before HTTP responses to prevent redirect loops
 - Password reset via email magic links with:
   - 32-byte cryptographically secure tokens
   - SHA-256 hashing before storage
@@ -74,14 +84,17 @@ Preferred communication style: Simple, everyday language.
   - Single-use tokens (cleared after successful reset)
   - Generic error messages to prevent user enumeration
   - Automatic session creation after password reset
+- Resend integration for transactional email delivery
 
 **API Design**
 - RESTful endpoints following resource-based patterns
 
 Authentication Endpoints:
+- POST `/api/auth/signup` - Create new user account with email and password
 - POST `/api/auth/login` - Authenticate user and create session
 - POST `/api/auth/logout` - Destroy session
 - GET `/api/auth/me` - Get current authenticated user
+- GET `/api/auth/users` - Get all users (for login page display)
 - POST `/api/auth/setup-password` - Initial password setup for new users
 - POST `/api/auth/change-password` - Change password for authenticated users
 - GET `/api/auth/check-setup/:name` - Check if user needs password setup
@@ -90,7 +103,7 @@ Authentication Endpoints:
 - POST `/api/auth/password-reset/complete` - Complete password reset with new password
 
 Data Endpoints:
-- POST `/api/users/:name` - Get or create user by name
+- POST `/api/users/:name` - Get or create user by name (legacy)
 - GET `/api/users/:userId/moments` - Retrieve user's moments
 - POST `/api/moments` - Create moment with automatic sentiment analysis
 - GET `/api/users/:userId/tasks` - Retrieve user's tasks
