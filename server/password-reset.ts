@@ -37,12 +37,12 @@ function hashToken(token: string): string {
  * Invalidates any previous reset tokens for this user
  */
 export async function createPasswordResetToken(
-  userName: string
+  email: string
 ): Promise<string | null> {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.name, userName))
+    .where(eq(users.email, email))
     .limit(1);
 
   if (!user) {

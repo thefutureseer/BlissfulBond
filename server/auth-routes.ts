@@ -8,20 +8,21 @@ import {
   type AuthUser,
 } from "./auth.js";
 import { db } from "./db.js";
-import { users } from "../shared/schema.js";
-import { eq } from "drizzle-orm";
+import { users, signupSchema } from "../shared/schema.js";
+import { eq, desc } from "drizzle-orm";
 import {
   createPasswordResetToken,
   validateResetToken,
   resetPasswordWithToken,
 } from "./password-reset.js";
 import { sendPasswordResetEmail } from "./email-service.js";
+import bcrypt from "bcrypt";
 
 const router = Router();
 
 // Validation schemas
 const loginSchema = z.object({
-  name: z.enum(["daniel", "pacharee"]),
+  name: z.string().min(1),
   password: z.string().min(1),
 });
 
@@ -36,7 +37,7 @@ const changePasswordSchema = z.object({
 });
 
 const requestResetSchema = z.object({
-  name: z.enum(["daniel", "pacharee"]),
+  email: z.string().email(),
 });
 
 const validateTokenSchema = z.object({
@@ -46,6 +47,98 @@ const validateTokenSchema = z.object({
 const resetPasswordSchema = z.object({
   token: z.string().min(1),
   newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+/**
+ * POST /api/auth/signup
+ * Create a new user account
+ */
+router.post("/signup", async (req: Request, res: Response) => {
+  try {
+    const { name, email, password } = signupSchema.parse(req.body);
+    
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existingName = await db
+      .select()
+      .from(users)
+      .where(eq(users.name, name))
+      .limit(1);
+
+    if (existingName.length > 0) {
+      return res.status(400).json({ message: "Name already taken" });
+    }
+
+    const existingEmail = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
+
+    if (existingEmail.length > 0) {
+      return res.status(400).json({ message: "Email already registered" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        name,
+        email: normalizedEmail,
+        passwordHash,
+        passwordUpdatedAt: new Date(),
+      })
+      .returning();
+
+    req.session.regenerate((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Session error" });
+      }
+
+      req.session.userId = newUser.id;
+      req.session.userName = newUser.name;
+
+      res.json({
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+        },
+      });
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        message: "Invalid request",
+        errors: error.errors,
+      });
+    }
+    console.error("Signup error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/auth/users
+ * Get all users (for login page display)
+ */
+router.get("/users", async (req: Request, res: Response) => {
+  try {
+    const allUsers = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt));
+
+    res.json({ users: allUsers });
+  } catch (error) {
+    console.error("Get users error:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 /**
@@ -233,10 +326,6 @@ router.post("/change-password", async (req: Request, res: Response) => {
 router.get("/check-setup/:name", async (req: Request, res: Response) => {
   const name = req.params.name;
 
-  if (name !== "daniel" && name !== "pacharee") {
-    return res.status(400).json({ message: "Invalid user name" });
-  }
-
   const [user] = await db
     .select({
       id: users.id,
@@ -264,12 +353,14 @@ router.get("/check-setup/:name", async (req: Request, res: Response) => {
  */
 router.post("/password-reset/request", async (req: Request, res: Response) => {
   try {
-    const { name } = requestResetSchema.parse(req.body);
+    const { email } = requestResetSchema.parse(req.body);
+    
+    const normalizedEmail = email.toLowerCase().trim();
 
-    const resetToken = await createPasswordResetToken(name);
+    const resetToken = await createPasswordResetToken(normalizedEmail);
     
     if (resetToken) {
-      await sendPasswordResetEmail(name, resetToken);
+      await sendPasswordResetEmail(normalizedEmail, resetToken);
     }
 
     res.json({ 

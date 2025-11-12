@@ -21,6 +21,7 @@ async function ensureCouple() {
       console.log("🌱 Creating Daniel's account...");
       [daniel] = await db.insert(users).values({
         name: "daniel",
+        email: "daniel@spiritloveplay.com",
         passwordHash: danielPassword,
         passwordUpdatedAt: new Date(),
       }).returning();
@@ -31,6 +32,7 @@ async function ensureCouple() {
       console.log("🌱 Creating Pacharee's account...");
       [pacharee] = await db.insert(users).values({
         name: "pacharee",
+        email: "pacharee@spiritloveplay.com",
         passwordHash: pachareePassword,
         passwordUpdatedAt: new Date(),
       }).returning();

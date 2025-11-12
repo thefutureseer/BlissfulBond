@@ -6,6 +6,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull().unique(),
+  email: text("email").notNull().unique(),
   partnerId: varchar("partner_id"),
   passwordHash: text("password_hash"),
   passwordUpdatedAt: timestamp("password_updated_at"),
@@ -52,6 +53,13 @@ export const userSessions = pgTable("user_sessions", {
 
 export const insertUserSchema = createInsertSchema(users).pick({
   name: true,
+  email: true,
+});
+
+export const signupSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export const insertMomentSchema = createInsertSchema(moments).pick({

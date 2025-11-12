@@ -5,17 +5,15 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Heart, Mail, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
 const forgotPasswordSchema = z.object({
-  name: z.enum(["daniel", "pacharee"], {
-    required_error: "Please select your name",
-  }),
+  email: z.string().email("Please enter a valid email address"),
 });
 
 type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
@@ -104,24 +102,19 @@ export default function ForgotPassword() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="name"
+                    name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Your Name</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-name">
-                              <SelectValue placeholder="Select your name" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="daniel">Daniel</SelectItem>
-                            <SelectItem value="pacharee">Pacharee</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="your@email.com"
+                            {...field}
+                            data-testid="input-email"
+                            className="border-rose-200 focus:border-rose-400"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

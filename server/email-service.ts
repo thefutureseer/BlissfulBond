@@ -6,6 +6,10 @@
  * (e.g., Resend, Mailgun, SendGrid)
  */
 
+import { db } from "./db.js";
+import { users } from "../shared/schema.js";
+import { eq } from "drizzle-orm";
+
 interface EmailConfig {
   to: string;
   subject: string;
@@ -17,9 +21,17 @@ interface EmailConfig {
  * Send password reset email with magic link
  */
 export async function sendPasswordResetEmail(
-  recipientName: string,
+  recipientEmail: string,
   resetToken: string
 ): Promise<void> {
+  const [user] = await db
+    .select({ name: users.name })
+    .from(users)
+    .where(eq(users.email, recipientEmail))
+    .limit(1);
+
+  const recipientName = user?.name || "User";
+
   const baseUrl = process.env.REPLIT_DEV_DOMAIN
     ? `https://${process.env.REPLIT_DEV_DOMAIN}`
     : "http://localhost:5000";
@@ -27,7 +39,7 @@ export async function sendPasswordResetEmail(
   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
   const emailConfig: EmailConfig = {
-    to: recipientName,
+    to: recipientEmail,
     subject: "Password Reset - Spirit Love Play",
     html: generateResetEmailHTML(recipientName, resetUrl),
     text: generateResetEmailText(recipientName, resetUrl),
