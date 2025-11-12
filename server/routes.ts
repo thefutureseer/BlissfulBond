@@ -1,10 +1,25 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { analyzeSentiment } from "./sentiment";
 import { insertMomentSchema, insertTaskSchema } from "@shared/schema";
+import { sessionMiddleware } from "./session.js";
+import authRoutes from "./auth-routes.js";
+
+// Auth middleware to protect routes
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add session middleware
+  app.use(sessionMiddleware);
+
+  // Auth routes (public)
+  app.use("/api/auth", authRoutes);
   // Get or create user by name
   app.post("/api/users/:name", async (req, res) => {
     try {
@@ -21,8 +36,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get moments for a user
-  app.get("/api/users/:userId/moments", async (req, res) => {
+  // Get moments for a user (protected)
+  app.get("/api/users/:userId/moments", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const moments = await storage.getMomentsByUser(userId);
@@ -32,8 +47,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a new moment with sentiment analysis
-  app.post("/api/moments", async (req, res) => {
+  // Create a new moment with sentiment analysis (protected)
+  app.post("/api/moments", requireAuth, async (req, res) => {
     try {
       const data = insertMomentSchema.parse(req.body);
       
@@ -51,8 +66,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get tasks for a user
-  app.get("/api/users/:userId/tasks", async (req, res) => {
+  // Get tasks for a user (protected)
+  app.get("/api/users/:userId/tasks", requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
       const tasks = await storage.getTasksByUser(userId);
@@ -62,8 +77,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a new task
-  app.post("/api/tasks", async (req, res) => {
+  // Create a new task (protected)
+  app.post("/api/tasks", requireAuth, async (req, res) => {
     try {
       const data = insertTaskSchema.parse(req.body);
       const task = await storage.createTask(data);
@@ -73,8 +88,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update a task
-  app.patch("/api/tasks/:id", async (req, res) => {
+  // Update a task (protected)
+  app.patch("/api/tasks/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const task = await storage.updateTask(id, req.body);
@@ -89,8 +104,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a task
-  app.delete("/api/tasks/:id", async (req, res) => {
+  // Delete a task (protected)
+  app.delete("/api/tasks/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
       await storage.deleteTask(id);
