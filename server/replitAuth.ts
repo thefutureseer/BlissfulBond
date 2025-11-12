@@ -1,5 +1,4 @@
-import * as client from "openid-client";
-import { Strategy, type VerifyFunction } from "openid-client/passport";
+import { Issuer, Strategy, type VerifyFunction } from "openid-client";
 import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
@@ -11,16 +10,18 @@ import { pool } from "./db.js";
 // Memoized OIDC client creation
 const getOidcClient = memoize(
   async (redirectUri: string) => {
-    // Use v6 discovery API which returns a proper client configuration
-    const config = await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!,
-      {
-        redirect_uri: redirectUri,
-      }
+    const issuer = await Issuer.discover(
+      process.env.ISSUER_URL ?? "https://replit.com/oidc"
     );
     
-    return config;
+    const client = new issuer.Client({
+      client_id: process.env.REPL_ID!,
+      redirect_uris: [redirectUri],
+      response_types: ['code'],
+      token_endpoint_auth_method: 'none', // Public client - no secret required
+    });
+    
+    return client;
   },
   { maxAge: 3600 * 1000, primitive: true }
 );
@@ -127,13 +128,12 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/logout", async (req, res) => {
-    const config = await getOidcClient(`https://${req.hostname}/api/callback`);
+    const oidcClient = await getOidcClient(`https://${req.hostname}/api/callback`);
     req.logout(() => {
-      const logoutUrl = client.buildEndSessionUrl(config, {
-        client_id: process.env.REPL_ID!,
+      const logoutUrl = oidcClient.endSessionUrl({
         post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
       });
-      res.redirect(logoutUrl.href);
+      res.redirect(logoutUrl);
     });
   });
 }
@@ -157,8 +157,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   }
 
   try {
-    const config = await getOidcClient(`https://${req.hostname}/api/callback`);
-    const tokenSet = await client.refreshTokenGrant(config, refreshToken);
+    const oidcClient = await getOidcClient(`https://${req.hostname}/api/callback`);
+    const tokenSet = await oidcClient.refresh(refreshToken);
     updateUserSession(user, tokenSet);
     
     // Persist the updated session with refreshed tokens
