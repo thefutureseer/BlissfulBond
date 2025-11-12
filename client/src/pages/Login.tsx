@@ -292,7 +292,7 @@ export default function Login() {
                 {!isSetupMode && (
                   <div className="mt-4 text-center">
                     <Button
-                      variant="link"
+                      variant="ghost"
                       className="text-sm text-muted-foreground hover:text-rose-600"
                       onClick={() => setLocation("/forgot-password")}
                       data-testid="link-forgot-password"
