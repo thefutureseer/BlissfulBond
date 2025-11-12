@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema } from "@shared/schema";
 import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,12 +40,13 @@ export default function Signup() {
       const response = await apiRequest("POST", "/api/auth/signup", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Welcome!",
         description: "Your account has been created successfully.",
       });
-      setLocation("/emotions");
+      setTimeout(() => setLocation("/emotions"), 100);
     },
     onError: (error: Error) => {
       toast({

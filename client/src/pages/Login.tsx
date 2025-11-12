@@ -58,13 +58,13 @@ export default function Login() {
       const response = await apiRequest("POST", "/api/auth/login", credentials);
       return response.json() as Promise<LoginResponse>;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Welcome back! 💖",
         description: "Now share your vibe",
       });
-      setTimeout(() => setLocation("/emotions"), 500);
+      setTimeout(() => setLocation("/emotions"), 100);
     },
     onError: () => {
       toast({
@@ -80,13 +80,13 @@ export default function Login() {
       const response = await apiRequest("POST", "/api/auth/setup-password", data);
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Password set! 💖",
         description: "Now share your vibe",
       });
-      setTimeout(() => setLocation("/emotions"), 500);
+      setTimeout(() => setLocation("/emotions"), 100);
     },
   });
 
