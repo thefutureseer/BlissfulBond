@@ -146,7 +146,7 @@ export default function Login() {
             Spirit Love Play
           </h1>
           <p className="text-white/90 text-lg">
-            {isSetupMode ? "Set up your password" : "Welcome back"}
+            Lovingly login to our sanctuary
           </p>
         </div>
 
