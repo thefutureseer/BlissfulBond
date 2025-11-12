@@ -48,6 +48,12 @@ export class DbStorage implements IStorage {
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    // Security: partnerId is immutable after seeding
+    // Prevent partner relationship hijacking
+    if (updates.partnerId !== undefined) {
+      throw new Error("Partner relationship cannot be modified");
+    }
+    
     const result = await db
       .update(schema.users)
       .set(updates)

@@ -34,21 +34,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes (public)
   app.use("/api/auth", authRoutes);
-  // Get or create user by name
-  app.post("/api/users/:name", async (req, res) => {
-    try {
-      const { name } = req.params;
-      
-      let user = await storage.getUserByName(name);
-      if (!user) {
-        user = await storage.createUser({ name });
-      }
-      
-      res.json(user);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+  
+  // REMOVED: POST /api/users/:name auto-create endpoint
+  // Users are pre-seeded via seed script only
+  // This prevents unauthorized account creation
 
   // Get moments for a user (protected)
   app.get("/api/users/:userId/moments", requireAuth, async (req, res) => {
