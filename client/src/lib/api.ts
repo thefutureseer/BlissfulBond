@@ -61,6 +61,24 @@ export async function getUserMoments(userId: string): Promise<Moment[]> {
   return response.json();
 }
 
+export interface EmotionLog {
+  id: string;
+  userId: string;
+  emotion: string;
+  intensity: number;
+  createdAt: string;
+}
+
+export async function getUserEmotionLogs(userId: string): Promise<EmotionLog[]> {
+  const response = await fetch(`/api/users/${userId}/emotions`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    return [];
+  }
+  return response.json();
+}
+
 export async function createMoment(userId: string, content: string): Promise<Moment> {
   const response = await apiRequest("POST", "/api/moments", { userId, content });
   return response.json();

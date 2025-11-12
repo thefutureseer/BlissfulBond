@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, TrendingUp, Heart, Sparkles } from "lucide-react";
+import { ArrowLeft, TrendingUp, Heart, Sparkles, Activity } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { getOrCreateUser, getUserMoments, type User } from "@/lib/api";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { getOrCreateUser, getUserMoments, getUserEmotionLogs, type User } from "@/lib/api";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Area, Bar, Legend } from "recharts";
 
 export default function Analytics() {
   const [, setLocation] = useLocation();
@@ -20,6 +20,12 @@ export default function Analytics() {
   const { data: moments = [] } = useQuery({
     queryKey: ["/api/moments", userData?.id],
     queryFn: () => userData ? getUserMoments(userData.id) : [],
+    enabled: !!userData,
+  });
+
+  const { data: emotionLogs = [] } = useQuery({
+    queryKey: ["/api/emotions", userData?.id],
+    queryFn: () => userData ? getUserEmotionLogs(userData.id) : [],
     enabled: !!userData,
   });
 
@@ -58,6 +64,21 @@ export default function Analytics() {
     return score >= -0.2 && score <= 0.2;
   }).length;
   const negativeCount = moments.filter(m => (m.sentiment?.score || 0) < -0.2).length;
+
+  // Prepare emotion intensity trend data (last 10 entries)
+  const emotionTrendData = emotionLogs
+    .slice(-10)
+    .map((log, i) => ({
+      index: i + 1,
+      intensity: log.intensity,
+      emotion: log.emotion,
+      date: new Date(log.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    }));
+
+  // Calculate average emotion intensity
+  const avgEmotionIntensity = emotionLogs.length > 0
+    ? emotionLogs.reduce((sum, log) => sum + log.intensity, 0) / emotionLogs.length
+    : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -225,6 +246,55 @@ export default function Analytics() {
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
+                </Card>
+              </motion.div>
+            )}
+
+            {emotionTrendData.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Card className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Emotion Intensity Trend</h3>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Activity className="w-4 h-4" />
+                      <span>Avg: {avgEmotionIntensity.toFixed(1)}/10</span>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={emotionTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                      <YAxis domain={[0, 10]} tick={{ fontSize: 12 }} />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-card border rounded-lg p-3 shadow-lg">
+                                <p className="text-sm font-semibold">{payload[0].payload.emotion}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Intensity: {payload[0].value}/10
+                                </p>
+                                <p className="text-xs text-muted-foreground">{payload[0].payload.date}</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="intensity"
+                        stroke="#a78bfa"
+                        strokeWidth={3}
+                        dot={{ fill: "#a78bfa", r: 5 }}
+                        activeDot={{ r: 7 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </Card>
               </motion.div>
             )}
