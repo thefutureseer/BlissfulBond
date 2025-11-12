@@ -8,15 +8,16 @@ The application is built as a full-stack web application with offline-first capa
 
 **Recent Updates (Nov 12, 2025)**:
 - **MAJOR**: Migrated to Replit Auth for social authentication
-  - Replaced custom email/password auth with Replit OIDC
+  - Replaced custom email/password auth with Replit OIDC  
   - Users now login with Google, GitHub, Apple, or X accounts
   - No custom domain required for social login
   - Automatic user profile sync (email, first name, last name, profile image)
+  - Uses openid-client v6.8.1 with /passport subpath for Passport.js integration
 - Updated database schema for Replit Auth compatibility
   - Users table: firstName, lastName, profileImageUrl (removed password fields)
   - Sessions table with PostgreSQL store for Replit Auth
 - Landing page shows "Login with Replit" button for unauthenticated users
-- Dashboard shown immediately after successful login
+- **Analytics page shown immediately after successful login** (not Dashboard)
 - Added emotion intensity visualization feature
   - New GET /api/users/:userId/emotions endpoint for fetching emotion logs
   - Second graph on Analytics page showing emotion intensity trends over time
