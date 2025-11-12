@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Heart } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import TaskCard from "@/components/TaskCard";
-import { getOrCreateUser, getUserTasks, createTask, updateTask, deleteTask as apiDeleteTask, getCurrentUser } from "@/lib/api";
+import { getUserTasks, createTask, updateTask, deleteTask as apiDeleteTask } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import Confetti from "@/components/Confetti";
 
 const CATEGORIES = [
@@ -21,27 +23,21 @@ export default function Plan() {
   const [newTaskText, setNewTaskText] = useState<Record<string, string>>({});
   const [showConfetti, setShowConfetti] = useState(false);
   const queryClient = useQueryClient();
-  
-  const currentUser = getCurrentUser();
-
-  const { data: userData } = useQuery({
-    queryKey: ["/api/users", currentUser],
-    queryFn: () => getOrCreateUser(currentUser),
-  });
+  const { user, isLoading: authLoading } = useAuth();
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ["/api/tasks", userData?.id],
-    queryFn: () => userData ? getUserTasks(userData.id) : [],
-    enabled: !!userData,
+    queryKey: ["/api/tasks", user?.id],
+    queryFn: () => user ? getUserTasks(user.id) : [],
+    enabled: !!user,
   });
 
   const createTaskMutation = useMutation({
     mutationFn: async ({ text, category }: { text: string; category: string }) => {
-      if (!userData) throw new Error("User not loaded");
-      return createTask(userData.id, text, category);
+      if (!user) throw new Error("User not authenticated");
+      return createTask(user.id, text, category);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", userData?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", user?.id] });
       setShowConfetti(true);
     },
   });
@@ -50,7 +46,7 @@ export default function Plan() {
     mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
       updateTask(id, { completed }),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", userData?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", user?.id] });
       if (variables.completed) {
         setShowConfetti(true);
       }
@@ -60,7 +56,7 @@ export default function Plan() {
   const deleteTaskMutation = useMutation({
     mutationFn: apiDeleteTask,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks", userData?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks", user?.id] });
     },
   });
 
@@ -82,6 +78,17 @@ export default function Plan() {
   const handleDelete = (id: string) => {
     deleteTaskMutation.mutate(id);
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="p-12 text-center">
+          <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading...</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

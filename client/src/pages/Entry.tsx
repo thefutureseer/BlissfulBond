@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useLocation } from "wouter";
 import { Heart, ArrowLeft, Loader2 } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getOrCreateUser, createMoment, getCurrentUser } from "@/lib/api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createMoment } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import Confetti from "@/components/Confetti";
 
 export default function Entry() {
@@ -14,21 +16,15 @@ export default function Entry() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const queryClient = useQueryClient();
-  
-  const currentUser = getCurrentUser();
-
-  const { data: userData } = useQuery({
-    queryKey: ["/api/users", currentUser],
-    queryFn: () => getOrCreateUser(currentUser),
-  });
+  const { user, isLoading: authLoading } = useAuth();
 
   const createMomentMutation = useMutation({
     mutationFn: async (momentContent: string) => {
-      if (!userData) throw new Error("User not loaded");
-      return createMoment(userData.id, momentContent);
+      if (!user) throw new Error("User not authenticated");
+      return createMoment(user.id, momentContent);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/moments", userData?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/moments", user?.id] });
       setShowSuccess(true);
       setShowConfetti(true);
       setTimeout(() => {
@@ -41,6 +37,19 @@ export default function Entry() {
     if (!content.trim()) return;
     createMomentMutation.mutate(content.trim());
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="p-12 text-center">
+          <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  const userName = user?.firstName || "You";
 
   return (
     <div className="min-h-screen bg-background">
@@ -70,8 +79,8 @@ export default function Entry() {
             <Heart className="w-6 h-6 text-primary fill-primary" />
             <div>
               <p className="text-sm text-muted-foreground">Writing as</p>
-              <p className="font-script text-lg font-semibold capitalize text-primary">
-                {currentUser}
+              <p className="font-script text-lg font-semibold text-primary">
+                {userName}
               </p>
             </div>
           </div>

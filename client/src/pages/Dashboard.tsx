@@ -1,53 +1,57 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, BarChart3 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Plus, BarChart3, Heart } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import MomentCard from "@/components/MomentCard";
 import HeartProgress from "@/components/HeartProgress";
-import { getOrCreateUser, getUserMoments, setCurrentUser, getCurrentUser, type User } from "@/lib/api";
-
-type ViewMode = "both" | "daniel" | "pacharee";
+import { getUserMoments, getPartnerUser } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const [viewMode, setViewMode] = useState<ViewMode>("both");
+  const { user, isLoading: authLoading } = useAuth();
 
-  const { data: danielUser } = useQuery({
-    queryKey: ["/api/users", "daniel"],
-    queryFn: () => getOrCreateUser("daniel"),
+  // Fetch partner user
+  const { data: partner } = useQuery({
+    queryKey: ["/api/users/partner", user?.id],
+    queryFn: () => user ? getPartnerUser(user.id) : null,
+    enabled: !!user,
   });
 
-  const { data: pachareeUser } = useQuery({
-    queryKey: ["/api/users", "pacharee"],
-    queryFn: () => getOrCreateUser("pacharee"),
+  // Fetch authenticated user's moments
+  const { data: userMoments = [] } = useQuery({
+    queryKey: ["/api/moments", user?.id],
+    queryFn: () => user ? getUserMoments(user.id) : [],
+    enabled: !!user,
   });
 
-  const { data: danielMoments = [] } = useQuery({
-    queryKey: ["/api/moments", danielUser?.id],
-    queryFn: () => danielUser ? getUserMoments(danielUser.id) : [],
-    enabled: !!danielUser,
+  // Fetch partner's moments
+  const { data: partnerMoments = [] } = useQuery({
+    queryKey: ["/api/moments", partner?.id],
+    queryFn: () => partner ? getUserMoments(partner.id) : [],
+    enabled: !!partner,
   });
 
-  const { data: pachareeMoments = [] } = useQuery({
-    queryKey: ["/api/moments", pachareeUser?.id],
-    queryFn: () => pachareeUser ? getUserMoments(pachareeUser.id) : [],
-    enabled: !!pachareeUser,
-  });
-
-  const handleAddMoment = (user: User) => {
-    setCurrentUser(user);
+  const handleAddMoment = () => {
     setLocation("/entry");
   };
 
-  const cycleView = () => {
-    setViewMode((current) => {
-      if (current === "both") return "daniel";
-      if (current === "daniel") return "pacharee";
-      return "both";
-    });
-  };
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="p-12 text-center">
+          <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  const userName = user?.firstName || "Your";
+  const partnerName = partner?.firstName || "Partner's";
+  const hasPartner = !!partner;
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,24 +70,14 @@ export default function Dashboard() {
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={cycleView}
-              data-testid="button-toggle-view"
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              {viewMode === "both" ? "Both" : viewMode === "daniel" ? "Daniel" : "Pacharee"}
-            </Button>
           </div>
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto p-4">
-        <div
-          className={`grid gap-6 ${viewMode === "both" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 max-w-2xl mx-auto"}`}
-        >
-          {(viewMode === "both" || viewMode === "daniel") && (
+        <div className={`grid gap-6 ${hasPartner ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 max-w-2xl mx-auto"}`}>
+          {/* Authenticated User's Column */}
+          {user && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -91,31 +85,31 @@ export default function Dashboard() {
             >
               <div className="bg-gradient-to-br from-rose-400/10 to-pink-200/10 rounded-lg p-6 border border-primary/20">
                 <h2 className="text-xl font-script font-semibold text-primary mb-4">
-                  Daniel's Journal
+                  {userName} Journal
                 </h2>
                 
                 <HeartProgress
-                  value={danielMoments.length}
+                  value={userMoments.length}
                   max={20}
                   label="Moments"
                 />
 
                 <div className="mt-6 space-y-3">
-                  {danielMoments.length === 0 ? (
+                  {userMoments.length === 0 ? (
                     <p className="text-muted-foreground text-center py-8 text-sm italic">
                       No moments yet. Start your journey!
                     </p>
                   ) : (
-                    danielMoments.map((moment) => (
+                    userMoments.map((moment) => (
                       <MomentCard key={moment.id} moment={moment} />
                     ))
                   )}
                 </div>
 
                 <Button
-                  onClick={() => handleAddMoment("daniel")}
+                  onClick={handleAddMoment}
                   className="w-full mt-4"
-                  data-testid="button-add-moment-daniel"
+                  data-testid="button-add-moment-user"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Moment
@@ -124,7 +118,8 @@ export default function Dashboard() {
             </motion.div>
           )}
 
-          {(viewMode === "both" || viewMode === "pacharee") && (
+          {/* Partner's Column */}
+          {hasPartner && partner && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -132,36 +127,46 @@ export default function Dashboard() {
             >
               <div className="bg-gradient-to-br from-amber-300/10 to-pink-200/10 rounded-lg p-6 border border-secondary/20">
                 <h2 className="text-xl font-script font-semibold text-secondary mb-4">
-                  Pacharee's Journal
+                  {partnerName} Journal
                 </h2>
                 
                 <HeartProgress
-                  value={pachareeMoments.length}
+                  value={partnerMoments.length}
                   max={20}
                   label="Moments"
                 />
 
                 <div className="mt-6 space-y-3">
-                  {pachareeMoments.length === 0 ? (
+                  {partnerMoments.length === 0 ? (
                     <p className="text-muted-foreground text-center py-8 text-sm italic">
-                      No moments yet. Start your journey!
+                      No moments yet.
                     </p>
                   ) : (
-                    pachareeMoments.map((moment) => (
+                    partnerMoments.map((moment) => (
                       <MomentCard key={moment.id} moment={moment} />
                     ))
                   )}
                 </div>
-
-                <Button
-                  onClick={() => handleAddMoment("pacharee")}
-                  className="w-full mt-4 bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                  data-testid="button-add-moment-pacharee"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Moment
-                </Button>
               </div>
+            </motion.div>
+          )}
+
+          {/* No Partner Message */}
+          {!hasPartner && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-4"
+            >
+              <Card className="p-12 text-center">
+                <Heart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-2">
+                  No partner linked yet
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Partner linking coming soon!
+                </p>
+              </Card>
             </motion.div>
           )}
         </div>

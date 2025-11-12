@@ -13,6 +13,7 @@ const db = drizzle({ client: pool, schema });
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
+  getPartnerUser(userId: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   
@@ -35,6 +36,26 @@ export class DbStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const result = await db.select().from(schema.users).where(eq(schema.users.id, id));
     return result[0];
+  }
+
+  async getPartnerUser(userId: string): Promise<User | undefined> {
+    const user = await this.getUser(userId);
+    if (!user?.partnerId) {
+      return undefined;
+    }
+    
+    const partner = await this.getUser(user.partnerId);
+    if (!partner) {
+      return undefined;
+    }
+    
+    // Verify mutual partner relationship for security
+    // Only return partner if relationship is mutual
+    if (partner.partnerId !== userId) {
+      return undefined;
+    }
+    
+    return partner;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {

@@ -21,6 +21,25 @@ export interface Task {
   createdAt: string;
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  profileImageUrl: string | null;
+  partnerId: string | null;
+}
+
+export async function getPartnerUser(userId: string): Promise<UserProfile | null> {
+  const response = await fetch(`/api/users/${userId}/partner`, {
+    credentials: "include",
+  });
+  if (!response.ok) {
+    return null;
+  }
+  return response.json();
+}
+
 export async function getUserMoments(userId: string): Promise<Moment[]> {
   const response = await fetch(`/api/users/${userId}/moments`, {
     credentials: "include",

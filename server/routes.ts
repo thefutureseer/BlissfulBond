@@ -43,6 +43,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get partner for a user (protected)
+  app.get("/api/users/:userId/partner", isAuthenticated, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const sessionUserId = getUserId(req);
+      
+      // Only allow access to own partner
+      if (userId !== sessionUserId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const partner = await storage.getPartnerUser(userId);
+      
+      // Return 200 with null if no partner exists (not 404)
+      // This prevents React Query from treating it as an error
+      res.json(partner || null);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get moments for a user (protected)
   app.get("/api/users/:userId/moments", isAuthenticated, async (req, res) => {
     try {

@@ -23,11 +23,17 @@ The application is built as a full-stack web application with offline-first capa
   - Displays last 10 emotion check-ins with purple line chart
   - Shows average emotion intensity and individual emotion details in tooltips
   - Graph displays independently when emotion logs exist (no moments required)
-- Refactored Analytics page for Replit Auth integration
+- Refactored all pages for Replit Auth integration with partner-aware architecture
   - Removed hardcoded Daniel/Pacharee user selection system
-  - Analytics now fetch data for the authenticated user via useAuth() hook
+  - All pages now use authenticated user from useAuth() hook
+  - Added GET /api/users/:userId/partner endpoint for fetching partner information
+  - Dashboard displays dual-column layout: authenticated user + partner (when partner exists)
+  - Entry page creates moments for authenticated user only
+  - Plan page shows tasks for authenticated user
+  - Analytics page fetches data for authenticated user
   - Empty state appears only when both moments AND emotion logs are empty
   - Moment-based analytics (sentiment cards/trends) conditionally render when moments exist
+  - Partner relationship is mutual (both users have each other's partnerId)
 
 ## User Preferences
 
