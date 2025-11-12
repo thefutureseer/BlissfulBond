@@ -289,6 +289,19 @@ export default function Login() {
                   </div>
                 </form>
 
+                {!isSetupMode && (
+                  <div className="mt-4 text-center">
+                    <Button
+                      variant="link"
+                      className="text-sm text-muted-foreground hover:text-rose-600"
+                      onClick={() => setLocation("/forgot-password")}
+                      data-testid="link-forgot-password"
+                    >
+                      Forgot password?
+                    </Button>
+                  </div>
+                )}
+
                 {isSetupMode && (
                   <div className="mt-4 text-xs text-muted-foreground text-center space-y-1">
                     <p>🔒 Passwords are secured with bcrypt (cost factor 12)</p>
