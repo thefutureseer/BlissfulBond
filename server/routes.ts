@@ -174,6 +174,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get emotion logs for a user (protected)
+  app.get("/api/users/:userId/emotions", isAuthenticated, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const sessionUserId = getUserId(req);
+      
+      // Allow access if requesting own data OR if requesting partner's data
+      const isOwnData = userId === sessionUserId;
+      const isPartnerData = await arePartners(sessionUserId, userId);
+      
+      if (!isOwnData && !isPartnerData) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const emotionLogs = await storage.getEmotionLogsByUser(userId);
+      res.json(emotionLogs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create emotion log (protected)
   app.post("/api/emotions", isAuthenticated, async (req, res) => {
     try {

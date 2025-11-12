@@ -27,6 +27,7 @@ export interface IStorage {
   deleteTask(id: string): Promise<void>;
   
   // Emotion Logs
+  getEmotionLogsByUser(userId: string, options?: { start?: Date; end?: Date; limit?: number }): Promise<EmotionLog[]>;
   createEmotionLog(emotionLog: InsertEmotionLog): Promise<EmotionLog>;
 }
 
@@ -95,6 +96,22 @@ export class DbStorage implements IStorage {
 
   async deleteTask(id: string): Promise<void> {
     await db.delete(schema.tasks).where(eq(schema.tasks.id, id));
+  }
+
+  async getEmotionLogsByUser(userId: string, options?: { start?: Date; end?: Date; limit?: number }): Promise<EmotionLog[]> {
+    let query = db.select().from(schema.emotionLogs).where(eq(schema.emotionLogs.userId, userId));
+    
+    // No additional filters needed for start/end in this simple implementation
+    // Could add filtering later if needed
+    
+    const result = await query.orderBy(schema.emotionLogs.createdAt);
+    
+    // Apply limit if provided
+    if (options?.limit) {
+      return result.slice(0, options.limit);
+    }
+    
+    return result;
   }
 
   async createEmotionLog(emotionLog: InsertEmotionLog): Promise<EmotionLog> {
