@@ -5,28 +5,24 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, TrendingUp, Heart, Sparkles, Activity } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { getOrCreateUser, getUserMoments, getUserEmotionLogs, type User } from "@/lib/api";
+import { getUserMoments, getUserEmotionLogs } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ComposedChart, Area, Bar, Legend } from "recharts";
 
 export default function Analytics() {
   const [, setLocation] = useLocation();
-  const [selectedUser, setSelectedUser] = useState<User>("daniel");
-
-  const { data: userData } = useQuery({
-    queryKey: ["/api/users", selectedUser],
-    queryFn: () => getOrCreateUser(selectedUser),
-  });
+  const { user, isLoading: authLoading } = useAuth();
 
   const { data: moments = [] } = useQuery({
-    queryKey: ["/api/moments", userData?.id],
-    queryFn: () => userData ? getUserMoments(userData.id) : [],
-    enabled: !!userData,
+    queryKey: ["/api/moments", user?.id],
+    queryFn: () => user ? getUserMoments(user.id) : [],
+    enabled: !!user,
   });
 
   const { data: emotionLogs = [] } = useQuery({
-    queryKey: ["/api/emotions", userData?.id],
-    queryFn: () => userData ? getUserEmotionLogs(userData.id) : [],
-    enabled: !!userData,
+    queryKey: ["/api/emotions", user?.id],
+    queryFn: () => user ? getUserEmotionLogs(user.id) : [],
+    enabled: !!user,
   });
 
   // Prepare sentiment trend data
@@ -83,53 +79,38 @@ export default function Analytics() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setLocation("/dashboard")}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h1 className="text-2xl font-script font-bold text-primary">
-              Relationship Analytics
-            </h1>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant={selectedUser === "daniel" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedUser("daniel")}
-              data-testid="button-select-daniel"
-            >
-              Daniel
-            </Button>
-            <Button
-              variant={selectedUser === "pacharee" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedUser("pacharee")}
-              className={selectedUser === "pacharee" ? "bg-secondary text-secondary-foreground hover:bg-secondary/90" : ""}
-              data-testid="button-select-pacharee"
-            >
-              Pacharee
-            </Button>
-          </div>
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation("/dashboard")}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text-2xl font-script font-bold text-primary">
+            Relationship Analytics
+          </h1>
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto p-4 py-8 space-y-6">
-        {moments.length === 0 ? (
+        {authLoading ? (
+          <Card className="p-12 text-center">
+            <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+            <p className="text-muted-foreground">Loading analytics...</p>
+          </Card>
+        ) : moments.length === 0 && emotionLogs.length === 0 ? (
           <Card className="p-12 text-center">
             <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">
-              No moments yet for {selectedUser}. Start journaling to see analytics!
+              No moments or emotion check-ins yet{user?.firstName ? `, ${user.firstName}` : ""}. Start journaling to see analytics!
             </p>
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {moments.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -189,6 +170,7 @@ export default function Analytics() {
                 </Card>
               </motion.div>
             </div>
+            )}
 
             {trendData.length > 0 && (
               <motion.div

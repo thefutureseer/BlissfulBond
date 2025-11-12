@@ -17,6 +17,17 @@ The application is built as a full-stack web application with offline-first capa
   - Sessions table with PostgreSQL store for Replit Auth
 - Landing page shows "Login with Replit" button for unauthenticated users
 - Dashboard shown immediately after successful login
+- Added emotion intensity visualization feature
+  - New GET /api/users/:userId/emotions endpoint for fetching emotion logs
+  - Second graph on Analytics page showing emotion intensity trends over time
+  - Displays last 10 emotion check-ins with purple line chart
+  - Shows average emotion intensity and individual emotion details in tooltips
+  - Graph displays independently when emotion logs exist (no moments required)
+- Refactored Analytics page for Replit Auth integration
+  - Removed hardcoded Daniel/Pacharee user selection system
+  - Analytics now fetch data for the authenticated user via useAuth() hook
+  - Empty state appears only when both moments AND emotion logs are empty
+  - Moment-based analytics (sentiment cards/trends) conditionally render when moments exist
 
 ## User Preferences
 
@@ -106,6 +117,8 @@ Data Endpoints:
 - POST `/api/tasks` - Create new task
 - PATCH `/api/tasks/:id` - Update task (toggle completion)
 - DELETE `/api/tasks/:id` - Remove task
+- GET `/api/users/:userId/emotions` - Retrieve user's emotion logs
+- POST `/api/emotions` - Create emotion log entry
 
 **Validation & Type Safety**
 - Zod schemas derived from Drizzle table definitions
