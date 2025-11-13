@@ -55,6 +55,19 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // In production, ensure database tables exist BEFORE setting up auth
+  // Auth setup needs sessions table to exist for session storage
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      log('🔧 Setting up production database...');
+      await runMigrations();
+      log('✅ Production database ready');
+    } catch (err: any) {
+      log('❌ Database setup failed: ' + err.message);
+      log('⚠️ Server will start but may not function correctly');
+    }
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -85,13 +98,5 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
-    
-    // Run migrations in background after port binding (production only)
-    // This ensures fast startup while still initializing database
-    if (process.env.NODE_ENV === 'production') {
-      runMigrations().catch(err => {
-        log('❌ Migration failed: ' + err.message);
-      });
-    }
   });
 })();
