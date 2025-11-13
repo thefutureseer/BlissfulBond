@@ -81,10 +81,15 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      const user = {};
+      updateUserSession(user, tokens);
+      await upsertUser(tokens.claims());
+      verified(null, user);
+    } catch (error: any) {
+      console.error('❌ OAuth verify error:', error);
+      verified(error);
+    }
   };
 
   // Keep track of registered strategies
@@ -121,14 +126,30 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     console.log('[OAuth Callback] hostname:', req.hostname);
+    console.log('[OAuth Callback] protocol:', req.protocol);
+    console.log('[OAuth Callback] full URL:', `${req.protocol}://${req.hostname}${req.originalUrl}`);
     console.log('[OAuth Callback] query params:', req.query);
     console.log('[OAuth Callback] REPL_ID:', process.env.REPL_ID);
     
     ensureStrategy(req.hostname);
+    
+    // Add custom error handler
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/emotions",
       failureRedirect: "/api/login",
-    })(req, res, next);
+    })(req, res, (err) => {
+      if (err) {
+        console.error('❌ OAuth authentication failed:', err);
+        console.error('❌ Error details:', JSON.stringify(err, null, 2));
+        res.status(500).json({ 
+          message: 'Authentication failed',
+          error: err.message,
+          details: err.error_description || 'No additional details'
+        });
+      } else {
+        next();
+      }
+    });
   });
 
   app.get("/api/logout", (req, res) => {
