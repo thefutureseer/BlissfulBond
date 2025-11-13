@@ -29,7 +29,17 @@ export async function runMigrations(): Promise<void> {
     try {
       log('🔧 Setting up database schema...');
       
+      // Check database connection first
+      try {
+        await db.execute(sql`SELECT 1`);
+        log('✅ Database connection successful');
+      } catch (dbError: any) {
+        log('❌ Database connection failed: ' + dbError.message);
+        throw new Error('Cannot connect to database: ' + dbError.message);
+      }
+      
       // Create tables using raw SQL - safe CREATE IF NOT EXISTS
+      log('Creating users table...');
       await db.execute(sql`
         CREATE TABLE IF NOT EXISTS users (
           id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -39,14 +49,20 @@ export async function runMigrations(): Promise<void> {
           profile_image_url VARCHAR,
           partner_id VARCHAR REFERENCES users(id)
         );
-
+      `);
+      
+      log('Creating sessions table...');
+      await db.execute(sql`
         CREATE TABLE IF NOT EXISTS sessions (
           sid VARCHAR PRIMARY KEY,
           sess JSON NOT NULL,
           expire TIMESTAMP NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions(expire);
-
+      `);
+      
+      log('Creating moments table...');
+      await db.execute(sql`
         CREATE TABLE IF NOT EXISTS moments (
           id SERIAL PRIMARY KEY,
           user_id VARCHAR NOT NULL REFERENCES users(id),
@@ -56,7 +72,10 @@ export async function runMigrations(): Promise<void> {
           emotions TEXT[] DEFAULT '{}',
           created_at TIMESTAMP DEFAULT NOW()
         );
-
+      `);
+      
+      log('Creating tasks table...');
+      await db.execute(sql`
         CREATE TABLE IF NOT EXISTS tasks (
           id SERIAL PRIMARY KEY,
           user_id VARCHAR NOT NULL REFERENCES users(id),
@@ -65,7 +84,10 @@ export async function runMigrations(): Promise<void> {
           completed BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP DEFAULT NOW()
         );
-
+      `);
+      
+      log('Creating emotion_logs table...');
+      await db.execute(sql`
         CREATE TABLE IF NOT EXISTS emotion_logs (
           id SERIAL PRIMARY KEY,
           user_id VARCHAR NOT NULL REFERENCES users(id),
@@ -78,7 +100,9 @@ export async function runMigrations(): Promise<void> {
       log('✅ Database schema ready');
       migrationComplete = true;
     } catch (error: any) {
+      console.error('❌ MIGRATION ERROR:', error);
       log('❌ Schema setup error: ' + error.message);
+      log('❌ Full error: ' + JSON.stringify(error, null, 2));
       // Still mark as complete to avoid blocking requests indefinitely
       migrationComplete = true;
       throw error;

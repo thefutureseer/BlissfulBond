@@ -60,15 +60,30 @@ app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
     try {
       log('🔧 Setting up production database...');
+      log('DATABASE_URL: ' + (process.env.DATABASE_URL ? 'Set ✓' : 'Missing ✗'));
+      log('SESSION_SECRET: ' + (process.env.SESSION_SECRET ? 'Set ✓' : 'Missing ✗'));
+      log('REPL_ID: ' + (process.env.REPL_ID ? 'Set ✓' : 'Missing ✗'));
+      
       await runMigrations();
       log('✅ Production database ready');
     } catch (err: any) {
+      console.error('❌ PRODUCTION DATABASE SETUP FAILED:', err);
       log('❌ Database setup failed: ' + err.message);
+      log('❌ Stack trace: ' + err.stack);
       log('⚠️ Server will start but may not function correctly');
     }
   }
 
-  const server = await registerRoutes(app);
+  let server;
+  try {
+    log('Setting up routes and auth...');
+    server = await registerRoutes(app);
+    log('✅ Routes and auth setup complete');
+  } catch (err: any) {
+    console.error('❌ ROUTE SETUP FAILED:', err);
+    log('❌ Route setup failed: ' + err.message);
+    throw err;
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
