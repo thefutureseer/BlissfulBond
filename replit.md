@@ -17,7 +17,11 @@ The application is built as a full-stack web application with offline-first capa
   - Users table: firstName, lastName, profileImageUrl (removed password fields)
   - Sessions table with PostgreSQL store for Replit Auth
 - Landing page shows "Login with Replit" button for unauthenticated users
-- **Analytics page shown immediately after successful login** (not Dashboard)
+- **Emotion Check-in page shown immediately after successful login** (/emotions)
+  - User selects from 4 emotion cards: Love, Calm, Excited, Grateful
+  - Plus one "Feeling negative" button with intensity slider (1-1000)
+  - After logging emotion, redirects to Analytics page
+  - Emotion data appears in the second chart on Analytics page
 - Added emotion intensity visualization feature
   - New GET /api/users/:userId/emotions endpoint for fetching emotion logs
   - Second graph on Analytics page showing emotion intensity trends over time

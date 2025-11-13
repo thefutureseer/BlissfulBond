@@ -59,19 +59,20 @@ export default function EmotionCheckIn() {
     },
     onSuccess: () => {
       setShowConfetti(true);
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/emotions"] });
       toast({
         title: "Vibe saved! 💖",
         description: "Your emotion has been logged beautifully",
       });
       setTimeout(() => {
-        setLocation("/dashboard");
+        setLocation("/analytics");
       }, 2000);
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error("Emotion save error:", error);
       toast({
         title: "Something went wrong",
-        description: "Please try again",
+        description: error.message || "Please try again",
         variant: "destructive",
       });
     },
@@ -88,9 +89,16 @@ export default function EmotionCheckIn() {
   };
 
   const handleSaveVibe = () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Not authenticated",
+        description: "Please log in to save your emotion",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const intensity = showNegative ? negativeIntensity[0] : 100;
+    const intensity = showNegative ? negativeIntensity[0] : 800;
     saveEmotionMutation.mutate({
       userId: user.id,
       emotion: selectedEmotion || "",
