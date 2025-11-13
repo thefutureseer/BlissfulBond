@@ -6,7 +6,7 @@ Spirit Love Play is a romantic relationship journaling and task management appli
 
 The application is built as a full-stack web application with offline-first capabilities, allowing users to maintain their relationship journal and tasks even without an internet connection. It emphasizes a romantic, elegant user experience with custom animations, gradient backgrounds, and thoughtful visual details.
 
-**Recent Updates (Nov 12, 2025)**:
+**Recent Updates (Nov 13, 2025)**:
 - **MAJOR**: Migrated to Replit Auth for social authentication
   - Replaced custom email/password auth with Replit OIDC  
   - Users now login with Google, GitHub, Apple, or X accounts
@@ -15,7 +15,12 @@ The application is built as a full-stack web application with offline-first capa
   - Uses openid-client v6.8.1 with /passport subpath for Passport.js integration
 - Updated database schema for Replit Auth compatibility
   - Users table: firstName, lastName, profileImageUrl (removed password fields)
-  - Sessions table with PostgreSQL store for Replit Auth
+  - **Single sessions table** with PostgreSQL store for Replit Auth (removed duplicate user_sessions table)
+- Fixed emotion save functionality
+  - Corrected query cache invalidation from `/api/auth/me` to `/api/emotions`
+  - Increased positive emotion intensity to 800 (matching negative scale of 1-1000)
+  - Added authentication check with user-friendly error messages
+  - Improved error logging for debugging
 - Landing page shows "Login with Replit" button for unauthenticated users
 - **Emotion Check-in page shown immediately after successful login** (/emotions)
   - User selects from 4 emotion cards: Love, Calm, Excited, Grateful
@@ -94,10 +99,10 @@ Preferred communication style: Simple, everyday language.
 
 **Data Models**
 - **Users**: OIDC-based user profiles with auto-generated UUIDs, email, firstName, lastName, profileImageUrl, partnerId
-- **Sessions**: Passport session storage with expiration tracking
+- **Sessions**: Single PostgreSQL session table for Replit Auth (7-day TTL, automatic expiration)
 - **Moments**: Journal entries with content, timestamps, and AI-analyzed sentiment
 - **Tasks**: Categorized action items with completion status
-- **Emotion Logs**: Emotional check-ins with intensity tracking
+- **Emotion Logs**: Emotional check-ins with intensity tracking (1-1000 scale)
 
 **Authentication & Security**
 - Replit Auth (OIDC) for social authentication
