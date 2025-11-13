@@ -19,10 +19,8 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
-// In production, ensure migrations complete before processing API requests
-if (process.env.NODE_ENV === 'production') {
-  app.use('/api', ensureMigrationsComplete);
-}
+// Ensure migrations complete before processing API requests
+app.use('/api', ensureMigrationsComplete);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -55,23 +53,23 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // In production, ensure database tables exist BEFORE setting up auth
+  // Ensure database tables exist BEFORE setting up auth
   // Auth setup needs sessions table to exist for session storage
-  if (process.env.NODE_ENV === 'production') {
-    try {
-      log('🔧 Setting up production database...');
-      log('DATABASE_URL: ' + (process.env.DATABASE_URL ? 'Set ✓' : 'Missing ✗'));
+  try {
+    log('🔧 Setting up database...');
+    log('DATABASE_URL: ' + (process.env.DATABASE_URL ? 'Set ✓' : 'Missing ✗'));
+    if (process.env.NODE_ENV === 'production') {
       log('SESSION_SECRET: ' + (process.env.SESSION_SECRET ? 'Set ✓' : 'Missing ✗'));
       log('REPL_ID: ' + (process.env.REPL_ID ? 'Set ✓' : 'Missing ✗'));
-      
-      await runMigrations();
-      log('✅ Production database ready');
-    } catch (err: any) {
-      console.error('❌ PRODUCTION DATABASE SETUP FAILED:', err);
-      log('❌ Database setup failed: ' + err.message);
-      log('❌ Stack trace: ' + err.stack);
-      log('⚠️ Server will start but may not function correctly');
     }
+    
+    await runMigrations();
+    log('✅ Database ready');
+  } catch (err: any) {
+    console.error('❌ DATABASE SETUP FAILED:', err);
+    log('❌ Database setup failed: ' + err.message);
+    log('❌ Stack trace: ' + err.stack);
+    log('⚠️ Server will start but may not function correctly');
   }
 
   let server;
