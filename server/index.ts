@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { runMigrations, ensureMigrationsComplete } from "./migrate";
 // Seeding disabled - users now sign up dynamically
 // import "./seed-on-startup.js";
 
@@ -17,6 +18,11 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// In production, ensure migrations complete before processing API requests
+if (process.env.NODE_ENV === 'production') {
+  app.use('/api', ensureMigrationsComplete);
+}
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -79,5 +85,13 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Run migrations in background after port binding (production only)
+    // This ensures fast startup while still initializing database
+    if (process.env.NODE_ENV === 'production') {
+      runMigrations().catch(err => {
+        log('❌ Migration failed: ' + err.message);
+      });
+    }
   });
 })();
