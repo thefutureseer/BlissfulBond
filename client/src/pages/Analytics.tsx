@@ -110,7 +110,7 @@ export default function Analytics() {
         ) : (
           <>
             {moments.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -149,23 +149,29 @@ export default function Analytics() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <Card className="p-6 bg-gradient-to-br from-purple-400/10 to-pink-200/10">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-3">Mood Distribution</p>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span>Positive</span>
-                        <span className="font-semibold">{positiveCount}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span>Neutral</span>
-                        <span className="font-semibold">{neutralCount}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span>Negative</span>
-                        <span className="font-semibold">{negativeCount}</span>
-                      </div>
+                <Card className="p-6 bg-gradient-to-br from-green-400/10 to-emerald-200/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Positive</p>
+                      <p className="text-3xl font-bold mt-2">{positiveCount}</p>
                     </div>
+                    <Sparkles className="w-8 h-8 text-green-500" />
+                  </div>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="p-6 bg-gradient-to-br from-purple-400/10 to-pink-200/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Negative</p>
+                      <p className="text-3xl font-bold mt-2">{negativeCount}</p>
+                    </div>
+                    <Activity className="w-8 h-8 text-purple-500" />
                   </div>
                 </Card>
               </motion.div>
