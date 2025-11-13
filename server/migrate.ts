@@ -43,11 +43,13 @@ export async function runMigrations(): Promise<void> {
       await db.execute(sql`
         CREATE TABLE IF NOT EXISTS users (
           id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-          email VARCHAR NOT NULL UNIQUE,
+          email VARCHAR UNIQUE,
           first_name VARCHAR,
           last_name VARCHAR,
           profile_image_url VARCHAR,
-          partner_id VARCHAR REFERENCES users(id)
+          partner_id VARCHAR REFERENCES users(id),
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
         );
       `);
       
@@ -55,7 +57,7 @@ export async function runMigrations(): Promise<void> {
       await db.execute(sql`
         CREATE TABLE IF NOT EXISTS sessions (
           sid VARCHAR PRIMARY KEY,
-          sess JSON NOT NULL,
+          sess JSONB NOT NULL,
           expire TIMESTAMP NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_sessions_expire ON sessions(expire);
@@ -64,36 +66,34 @@ export async function runMigrations(): Promise<void> {
       log('Creating moments table...');
       await db.execute(sql`
         CREATE TABLE IF NOT EXISTS moments (
-          id SERIAL PRIMARY KEY,
+          id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
           user_id VARCHAR NOT NULL REFERENCES users(id),
           content TEXT NOT NULL,
-          sentiment_score REAL,
-          sentiment_label VARCHAR,
-          emotions TEXT[] DEFAULT '{}',
-          created_at TIMESTAMP DEFAULT NOW()
+          sentiment JSON,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
         );
       `);
       
       log('Creating tasks table...');
       await db.execute(sql`
         CREATE TABLE IF NOT EXISTS tasks (
-          id SERIAL PRIMARY KEY,
+          id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
           user_id VARCHAR NOT NULL REFERENCES users(id),
-          title VARCHAR NOT NULL,
-          category VARCHAR NOT NULL,
-          completed BOOLEAN DEFAULT FALSE,
-          created_at TIMESTAMP DEFAULT NOW()
+          text TEXT NOT NULL,
+          category TEXT NOT NULL,
+          completed BOOLEAN DEFAULT FALSE NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
         );
       `);
       
       log('Creating emotion_logs table...');
       await db.execute(sql`
         CREATE TABLE IF NOT EXISTS emotion_logs (
-          id SERIAL PRIMARY KEY,
+          id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
           user_id VARCHAR NOT NULL REFERENCES users(id),
-          emotion VARCHAR NOT NULL,
+          emotion TEXT NOT NULL,
           intensity INTEGER NOT NULL,
-          created_at TIMESTAMP DEFAULT NOW()
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL
         );
       `);
       
