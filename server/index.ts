@@ -1,8 +1,32 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { exec } from "child_process";
+import { promisify } from "util";
 // Seeding disabled - users now sign up dynamically
 // import "./seed-on-startup.js";
+
+const execAsync = promisify(exec);
+
+async function setupDatabaseSchema() {
+  // Only run schema push in production on first startup
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      log('🔧 Setting up database schema...');
+      const { stdout, stderr } = await execAsync('npx drizzle-kit push --force');
+      
+      if (stdout) log(stdout);
+      if (stderr && !stderr.includes('deprecation')) {
+        log('⚠️ Schema warnings: ' + stderr);
+      }
+      
+      log('✅ Database schema ready');
+    } catch (error: any) {
+      log('❌ Schema setup failed: ' + error.message);
+      // Don't throw - tables might already exist
+    }
+  }
+}
 
 const app = express();
 
@@ -49,6 +73,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Setup database schema in production
+  await setupDatabaseSchema();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
