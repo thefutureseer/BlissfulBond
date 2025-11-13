@@ -120,6 +120,10 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
+    console.log('[OAuth Callback] hostname:', req.hostname);
+    console.log('[OAuth Callback] query params:', req.query);
+    console.log('[OAuth Callback] REPL_ID:', process.env.REPL_ID);
+    
     ensureStrategy(req.hostname);
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/emotions",
